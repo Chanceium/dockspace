@@ -1,5 +1,5 @@
 import logging
-from django.http import HttpResponseForbidden, HttpResponseRedirect
+from django.http import HttpResponseRedirect
 from django.urls import reverse
 
 logger = logging.getLogger(__name__)
@@ -49,7 +49,9 @@ def enforce_group_access(request, user, client, **kwargs):
     groups = group_access.groups.all()
     logger.info(f"Required groups for client {client.client_id}: {list(groups.values_list('name', flat=True))}")
 
-    if not groups.exists():
+    required_groups = list(groups.values_list("id", "name"))
+
+    if not required_groups:
         logger.info(f"No specific groups required for client {client.client_id}, allowing access")
         return None
 
@@ -66,12 +68,17 @@ def enforce_group_access(request, user, client, **kwargs):
 
     if account is None:
         logger.warning(f"No account found for user {user}, denying access")
-        return HttpResponseForbidden("You do not have access to this client.")
+        request.session["access_denied_context"] = {
+            "client_name": client.name or client.client_id,
+            "required_groups": [name for _, name in required_groups],
+            "user_groups": [],
+        }
+        return HttpResponseRedirect(reverse("dockspace:page_access_denied"))
 
-    user_groups = list(account.mail_groups.values_list('name', flat=True))
+    user_groups = list(account.mail_groups.values_list("name", flat=True))
     logger.info(f"User {account.email} belongs to groups: {user_groups}")
 
-    required_group_ids = list(groups.values_list("id", flat=True))
+    required_group_ids = [gid for gid, _ in required_groups]
     has_access = account.mail_groups.filter(id__in=required_group_ids).exists()
 
     if has_access:
@@ -79,4 +86,9 @@ def enforce_group_access(request, user, client, **kwargs):
         return None
 
     logger.warning(f"User {account.email} does NOT belong to any required groups for client {client.client_id}")
-    return HttpResponseForbidden("You do not have access to this client.")
+    request.session["access_denied_context"] = {
+        "client_name": client.name or client.client_id,
+        "required_groups": [name for _, name in required_groups],
+        "user_groups": user_groups,
+    }
+    return HttpResponseRedirect(reverse("dockspace:page_access_denied"))

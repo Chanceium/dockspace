@@ -680,12 +680,21 @@ def page_not_found_view(request):
 	return render(request, "dockspace/pages-404.html", status=404)
 
 
+def _build_profile_url(request):
+	"""Return absolute URL to the profile page using AppSettings.domain_url when available."""
+	app_settings = AppSettings.objects.first()
+	domain = getattr(app_settings, "domain_url", None) or request.get_host()
+	normalized_domain = (domain or "").rstrip("/")
+	if normalized_domain.startswith("http://") or normalized_domain.startswith("https://"):
+		base = normalized_domain
+	else:
+		base = f"{request.scheme}://{normalized_domain}"
+	return f"{base}/profile"
+
+
 def page_2fa_required(request):
 	"""Display 2FA required page with link to profile."""
-	app_settings = AppSettings.objects.first()
-	domain = getattr(app_settings, 'domain_url', None) or request.get_host()
-	profile_url = f"{request.scheme}://{domain}/profile"
-
+	profile_url = _build_profile_url(request)
 	client_name = request.GET.get('client', None)
 
 	context = {
@@ -693,6 +702,20 @@ def page_2fa_required(request):
 		'client_name': client_name,
 	}
 	return render(request, "dockspace/pages-2fa-required.html", context)
+
+
+def page_access_denied(request):
+	"""Render access denied page for OIDC clients when the user lacks required groups."""
+	profile_url = _build_profile_url(request)
+	context_data = request.session.pop("access_denied_context", {}) or {}
+
+	context = {
+		"profile_url": profile_url,
+		"client_name": context_data.get("client_name"),
+		"required_groups": context_data.get("required_groups") or [],
+		"user_groups": context_data.get("user_groups") or [],
+	}
+	return render(request, "dockspace/pages-access-denied.html", context, status=403)
 
 
 @login_required(login_url="dockspace:account_login")

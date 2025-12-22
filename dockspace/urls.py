@@ -10,6 +10,7 @@ urlpatterns = [
     path('recoverpw/', views.account_recoverpw, name='account_recoverpw'),
     path('login/totp/', views.account_totp, name='account_totp'),
     path('2fa-required/', views.page_2fa_required, name='page_2fa_required'),
+    path('access-denied/', views.page_access_denied, name='page_access_denied'),
     path('profile/', views.account_profile, name='account_profile'),
     path('profile/<int:account_id>/', views.account_profile, name='account_profile_admin'),
     path('management/', views.management_dashboard, name='management'),
