@@ -9,9 +9,13 @@ def userinfo(claims, principal):
     if isinstance(principal, MailAccount):
         account = principal
     else:
-        email = getattr(principal, "email", "") or None
-        if email:
-            account = MailAccount.objects.filter(email__iexact=email).first()
+        # Try to get account from the user.account relationship first
+        account = getattr(principal, "account", None)
+        if account is None:
+            # Fallback to email lookup
+            email = getattr(principal, "email", "") or None
+            if email:
+                account = MailAccount.objects.filter(email__iexact=email).first()
 
     if account is None:
         return claims

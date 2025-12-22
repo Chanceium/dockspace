@@ -35,16 +35,28 @@ class AccountUserBackend(BaseBackend):
         if not self._verify_sha512(password, account.password_hash):
             return None
 
-        # Build an in-memory Django User object for the session, not saved to DB.
-        user = User()
-        user.save = MethodType(lambda self, *args, **kwargs: None, user)  # no-op to avoid DB writes
-        user.id = account.id
-        user.username = account.email
-        user.email = account.email
-        user.is_staff = False
-        user.is_superuser = False
-        user.is_active = account.is_active
-        user.last_login = timezone.now()
+        # Get or create a Django User record to satisfy OIDC provider foreign keys
+        if account.user:
+            user = account.user
+            # Update user fields if they changed
+            user.username = account.email
+            user.email = account.email
+            user.is_active = account.is_active
+            user.last_login = timezone.now()
+            user.save()
+        else:
+            user = User.objects.create(
+                username=account.email,
+                email=account.email,
+                is_staff=False,
+                is_superuser=False,
+                is_active=account.is_active,
+                last_login=timezone.now(),
+            )
+            # Link the user to the account
+            account.user = user
+            account.save()
+
         # Attach the account for later access.
         user.account = account
         return user
@@ -54,14 +66,22 @@ class AccountUserBackend(BaseBackend):
             account = MailAccount.objects.get(pk=user_id)
         except MailAccount.DoesNotExist:
             return None
-        user = User()
-        user.save = MethodType(lambda self, *args, **kwargs: None, user)  # no-op to avoid DB writes
-        user.id = account.id
-        user.username = account.email
-        user.email = account.email
-        user.is_staff = False
-        user.is_superuser = False
-        user.is_active = account.is_active
+
+        # Get or create the User record if not already linked
+        if account.user:
+            user = account.user
+        else:
+            user = User.objects.create(
+                username=account.email,
+                email=account.email,
+                is_staff=False,
+                is_superuser=False,
+                is_active=account.is_active,
+            )
+            # Link the user to the account
+            account.user = user
+            account.save()
+
         user.account = account
         return user
 

@@ -607,6 +607,18 @@ def management_dashboard(request):
 				messages.error(request, "Could not update client groups.")
 			else:
 				messages.error(request, "Client not found.")
+		elif action == "regenerate_rsa_key":
+			try:
+				from oidc_provider.models import RSAKey
+				from oidc_provider.lib.utils.common import get_rsa_key
+				# Delete all existing keys
+				RSAKey.objects.all().delete()
+				# Generate new key
+				get_rsa_key()
+				messages.success(request, "RSA key regenerated successfully.")
+			except Exception as exc:
+				messages.error(request, f"Could not regenerate RSA key: {exc}")
+			return redirect("dockspace:management")
 
 	clients = Client.objects.all().order_by("-date_created") if Client else []
 	if clients:
@@ -620,6 +632,19 @@ def management_dashboard(request):
 				client.edit_form = OIDCClientCreateForm(instance=client, initial=initial)
 
 	all_aliases = MailAlias.objects.select_related("user").order_by("alias")
+
+	# Check RSA key status and auto-create if missing
+	rsa_key_exists = False
+	try:
+		from oidc_provider.models import RSAKey
+		rsa_key_exists = RSAKey.objects.exists()
+		# Auto-create RSA key if none exists
+		if not rsa_key_exists:
+			from oidc_provider.lib.utils.common import get_rsa_key
+			get_rsa_key()
+			rsa_key_exists = True
+	except ImportError:
+		pass
 
 	context = {
 		"accounts": accounts,
@@ -637,6 +662,7 @@ def management_dashboard(request):
 		"all_aliases": all_aliases,
 		"settings_form": settings_form,
 		"app_settings": app_settings,
+		"rsa_key_exists": rsa_key_exists,
 	}
 	return render(request, "dockspace/crm-management.html", context)
 

@@ -1,0 +1,78 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Authorize | Dockspace</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="{% static 'images/favicon.ico' %}">
+    <link href="{% static 'css/icons.min.css' %}" rel="stylesheet" type="text/css" />
+    <link href="{% static 'css/app.min.css' %}" rel="stylesheet" type="text/css" id="app-style"/>
+</head>
+<body class="loading authentication-bg" data-layout-config='{"darkMode":false}'>
+    <div class="account-pages pt-2 pt-sm-5 pb-4 pb-sm-5">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-xxl-6 col-lg-7">
+                    <div class="card">
+                        <div class="card-header pt-4 pb-4 text-center bg-primary">
+                            <span><img src="{% static 'images/logo.png' %}" alt="" height="18"></span>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="text-center w-75 m-auto">
+                                <h4 class="text-dark-50 text-center pb-0 fw-bold">Permission Request</h4>
+                                <p class="text-muted mb-3">{{ client.name|default:client.client_id }} is requesting access to your account.</p>
+                                <p class="text-muted small">Signed in as <strong>{{ request.user.get_username }}</strong></p>
+                            </div>
+
+                            <div class="mb-3">
+                                <h6 class="fw-semibold mb-2">Requested scopes</h6>
+                                <ul class="list-unstyled mb-0">
+                                    {% if scopes %}
+                                        {% for scope in scopes %}
+                                            <li class="d-flex align-items-start mb-1">
+                                                <i class="mdi mdi-check-circle text-success me-2"></i>
+                                                <div>
+                                                    <div class="fw-semibold">{{ scope.name }}</div>
+                                                    {% if scope.description %}
+                                                        <div class="text-muted small">{{ scope.description }}</div>
+                                                    {% endif %}
+                                                </div>
+                                            </li>
+                                        {% endfor %}
+                                    {% else %}
+                                        <li class="text-muted">No scopes were requested.</li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+
+                            <div class="mb-3">
+                                <h6 class="fw-semibold mb-1">Redirect URI</h6>
+                                <div class="text-muted small">{{ params.redirect_uri }}</div>
+                            </div>
+
+                            <form method="post" action="{% url 'oidc_provider:authorize' %}" class="mt-3">
+                                {% csrf_token %}
+                                {{ hidden_inputs }}
+
+                                {% if error %}
+                                    <div class="alert alert-danger" role="alert">{{ error }}</div>
+                                {% endif %}
+                                <div class="d-flex justify-content-between">
+                                    <button type="submit" name="deny" value="1" class="btn btn-outline-secondary">Cancel</button>
+                                    <button type="submit" name="allow" value="1" class="btn btn-primary">Allow Access</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include "dockspace/components/footer.html" %}
+
+    <script src="{% static 'js/vendor.min.js' %}"></script>
+    <script src="{% static 'js/app.min.js' %}"></script>
+</body>
+</html>

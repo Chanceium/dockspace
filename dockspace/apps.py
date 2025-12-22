@@ -1,10 +1,10 @@
 from django.apps import AppConfig
+from django.db.utils import OperationalError, ProgrammingError
 
 
 class DockspaceConfig(AppConfig):
-    # Keep label/access DB tables stable while module name changes.
     name = "dockspace"
-    label = "access"
+    label = "dockspace"
     verbose_name = "Dockspace"
 
     def ready(self):

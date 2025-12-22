@@ -14,9 +14,9 @@
 
         {% with account=user.account %}
         <li class="dropdown notification-list">
-            <a class="nav-link dropdown-toggle nav-user arrow-none me-0" data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="false"
+            <a class="nav-link dropdown-toggle nav-user arrow-none me-0 d-flex align-items-center" data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="false"
                 aria-expanded="false">
-                <span class="account-user-avatar">
+                <span class="account-user-avatar d-flex align-items-center">
                     {% if account.picture %}
                         <img src="{{ account.picture.url }}" alt="user-image" class="rounded-circle">
                     {% else %}
@@ -31,7 +31,7 @@
                         </span>
                     {% endif %}
                 </span>
-                <span class="ms-2 d-flex flex-column align-items-start text-start">
+                <span class="ms-2 d-flex flex-column align-items-start text-start justify-content-center">
                     <span class="account-user-name d-inline-block text-truncate" style="max-width: 180px;" title="{% if account.first_name or account.last_name %}{{ account.first_name|default_if_none:'' }}{% if account.first_name and account.last_name %} {% endif %}{{ account.last_name|default_if_none:'' }}{% elif user.get_full_name %}{{ user.get_full_name }}{% else %}{{ user.email|default:user.username }}{% endif %}">
                         {% if account.first_name or account.last_name %}
                             {{ account.first_name|default_if_none:'' }}{% if account.first_name and account.last_name %} {% endif %}{{ account.last_name|default_if_none:'' }}

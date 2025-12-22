@@ -3,6 +3,7 @@ import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from django.conf import settings
+from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.validators import RegexValidator, EmailValidator
@@ -246,6 +247,15 @@ class MailAccount(models.Model):
         message="Username must be 3-150 chars of letters, numbers, ., _, or -.",
     )
 
+    # Link to Django User for OIDC provider compatibility
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='account',
+        help_text="Associated Django user for OIDC authentication"
+    )
     username = models.CharField(max_length=150, unique=True, validators=[username_validator])
     email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=150, help_text="Given name")
@@ -401,6 +411,25 @@ class MailAccount(models.Model):
             self.picture.save(filename, content, save=False)
 
         super().save(*args, **kwargs)
+
+        # Create or update linked Django User for OIDC compatibility
+        if not self.user:
+            self.user = User.objects.create(
+                username=self.email,
+                email=self.email,
+                is_staff=False,
+                is_superuser=False,
+                is_active=self.is_active,
+            )
+            # Save again to update the user foreign key
+            super().save(update_fields=['user'])
+        else:
+            # Update user fields if they changed
+            if self.user.username != self.email or self.user.email != self.email or self.user.is_active != self.is_active:
+                self.user.username = self.email
+                self.user.email = self.email
+                self.user.is_active = self.is_active
+                self.user.save()
 
         # If saved with temp filename before PK existed, rename to PK-based name
         if self.picture and getattr(self.picture, "name", "").startswith("pictures/temp") and self.pk:
