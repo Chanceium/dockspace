@@ -149,7 +149,7 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = Path(os.getenv("DJANGO_MEDIA_ROOT", BASE_DIR / "media"))
 
 # Only allow authentication to OIDC clients for Django users, with optional group gating
-OIDC_AFTER_AUTHENTICATION_HOOK = 'dockspace.hooks.enforce_group_access'
+OIDC_AFTER_USERLOGIN_HOOK = 'dockspace.hooks.enforce_group_access'
 # Include requested claims in ID tokens (email, profile, etc.) instead of requiring a UserInfo call
 OIDC_IDTOKEN_INCLUDE_CLAIMS = True
 OIDC_USERINFO = 'dockspace.userinfo.userinfo'
