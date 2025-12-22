@@ -429,6 +429,19 @@ def management_dashboard(request):
 	client_form = OIDCClientCreateForm() if OIDCClientCreateForm else None
 	client_groups_form = ClientGroupsForm()
 
+	def _find_client(identifier):
+		"""Resolve a Client by string client_id or integer PK."""
+		if not Client or not identifier:
+			return None
+		# Prefer matching by client_id (e.g., az8l5404...)
+		obj = Client.objects.filter(client_id=identifier).first()
+		if obj:
+			return obj
+		try:
+			return Client.objects.filter(pk=int(identifier)).first()
+		except (TypeError, ValueError):
+			return None
+
 	if request.method == "POST":
 		action = request.POST.get("action")
 		target_account = None
@@ -553,7 +566,7 @@ def management_dashboard(request):
 			messages.error(request, "Could not create OIDC client. Check required fields.")
 		elif action == "update_client" and Client and OIDCClientCreateForm:
 			client_id = request.POST.get("client_id")
-			client_obj = Client.objects.filter(id=client_id).first()
+			client_obj = _find_client(client_id)
 			if client_obj:
 				form = OIDCClientCreateForm(request.POST, instance=client_obj)
 				if form.is_valid():
@@ -574,7 +587,7 @@ def management_dashboard(request):
 				messages.error(request, "Client not found.")
 		elif action == "delete_client" and Client:
 			client_id = request.POST.get("client_id")
-			client_obj = Client.objects.filter(id=client_id).first()
+			client_obj = _find_client(client_id)
 			if client_obj:
 				client_obj.delete()
 				messages.success(request, "Client deleted.")
@@ -582,7 +595,7 @@ def management_dashboard(request):
 			messages.error(request, "Client not found.")
 		elif action == "update_client_groups" and Client and ClientAccess:
 			client_id = request.POST.get("client_id")
-			client_obj = Client.objects.filter(id=client_id).first()
+			client_obj = _find_client(client_id)
 			if client_obj:
 				form = ClientGroupsForm(request.POST)
 				form.fields["groups"].queryset = groups
