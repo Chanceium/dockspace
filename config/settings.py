@@ -16,7 +16,7 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
-DMS_OUTPUT_DIR = DATA_DIR / "dms"
+DMS_OUTPUT_DIR = Path(os.getenv("DJANGO_DMS_OUTPUT_DIR", DATA_DIR / "dms"))
 DB_PATH = Path(os.getenv("DJANGO_DB_PATH", BASE_DIR / "db.sqlite3"))
 
 
