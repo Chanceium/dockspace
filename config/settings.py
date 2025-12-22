@@ -158,6 +158,6 @@ OIDC_USERINFO = 'dockspace.userinfo.userinfo'
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 # 2FA defaults
-LOGIN_URL = 'two_factor:login'
+LOGIN_URL = 'dockspace:account_login'
 OTP_TOTP_ISSUER = ''
 TWO_FACTOR_PATCH_ADMIN = False  # keep Django admin using its built-in login flow
