@@ -511,10 +511,8 @@ def management_dashboard(request):
 				messages.error(request, "You cannot delete your own account from the management page.")
 				return redirect("dockspace:management")
 			if target_account.is_admin:
-				current_admins = MailAccount.objects.filter(is_admin=True).count()
-				if current_admins <= 1:
-					messages.error(request, "Cannot delete the last admin account.")
-					return redirect("dockspace:management")
+				messages.error(request, "Admin accounts cannot be deleted from the management page.")
+				return redirect("dockspace:management")
 			target_account.delete()
 			messages.success(request, f"Deleted account {target_account.email}.")
 			return redirect("dockspace:management")

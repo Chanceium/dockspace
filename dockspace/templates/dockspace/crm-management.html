@@ -268,19 +268,25 @@
                                                                             </div>
                                                                             <small class="text-muted d-block">Admins can access this management page.</small>
                                                                         </form>
-                                                                        <form method="post" onsubmit="return confirm('Delete account {{ acct.email }}? This cannot be undone.');" class="mt-auto">
-                                                                            {% csrf_token %}
-                                                                            <input type="hidden" name="action" value="delete_account">
-                                                                            <input type="hidden" name="account_id" value="{{ acct.id }}">
-                                                                            <button class="btn btn-outline-danger btn-sm w-100" type="submit" {% if acct.id == current_account.id or (acct.is_admin and admin_count <= 1) %}disabled{% endif %}>
-                                                                                <i class="mdi mdi-delete me-1"></i>Delete account
-                                                                            </button>
-                                                                            {% if acct.id == current_account.id %}
-                                                                                <small class="text-muted d-block mt-1">You cannot delete your own account here.</small>
-                                                                            {% elif acct.is_admin and admin_count <= 1 %}
-                                                                                <small class="text-muted d-block mt-1">At least one admin is required.</small>
-                                                                            {% endif %}
-                                                                        </form>
+                                                                        {% if not acct.is_admin and acct.id != current_account.id %}
+                                                                            <form method="post" onsubmit="return confirm('Delete account {{ acct.email }}? This cannot be undone.');" class="mt-auto">
+                                                                                {% csrf_token %}
+                                                                                <input type="hidden" name="action" value="delete_account">
+                                                                                <input type="hidden" name="account_id" value="{{ acct.id }}">
+                                                                                <button class="btn btn-outline-danger btn-sm w-100" type="submit">
+                                                                                    <i class="mdi mdi-delete me-1"></i>Delete account
+                                                                                </button>
+                                                                            </form>
+                                                                        {% else %}
+                                                                            <div class="mt-auto">
+                                                                                <button class="btn btn-outline-secondary btn-sm w-100" type="button" disabled>
+                                                                                    <i class="mdi mdi-lock-outline me-1"></i>Deletion not allowed
+                                                                                </button>
+                                                                                <small class="text-muted d-block mt-1">
+                                                                                    {% if acct.id == current_account.id %}You cannot delete the account you are signed in as.{% else %}Admin accounts cannot be deleted here.{% endif %}
+                                                                                </small>
+                                                                            </div>
+                                                                        {% endif %}
                                                                     </div>
                                                                 </div>
                                                             </div>
