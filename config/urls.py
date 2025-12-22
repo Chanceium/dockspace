@@ -17,10 +17,11 @@ Including another URLconf
 import os
 from django.conf import settings
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, re_path
 
 from two_factor import urls as tf_urls
 import dockspace.urls
+from dockspace import views as dock_views
 
 urlpatterns = [
     path('', include(('dockspace.urls', 'dockspace'), namespace='dockspace')),
@@ -33,3 +34,9 @@ if os.getenv('ENABLE_DJANGO_ADMIN', 'false').lower() == 'true':
     urlpatterns.append(path('admin/', admin.site.urls))
 
 # Media files are now served through protected_media view in dockspace.urls
+
+# Catch-all 404 to serve the styled Dockspace page
+urlpatterns.append(re_path(r'^.*$', dock_views.page_not_found_view))
+
+# Custom handler for non-matched URLs (used when DEBUG=False)
+handler404 = 'dockspace.views.page_not_found_view'

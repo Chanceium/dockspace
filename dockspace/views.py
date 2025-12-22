@@ -715,7 +715,7 @@ def root_redirect(request):
 	return redirect("dockspace:account_login")
 
 
-def page_not_found_view(request):
+def page_not_found_view(request, exception=None):
 	return render(request, "dockspace/pages-404.html", status=404)
 
 
