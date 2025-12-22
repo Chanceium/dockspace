@@ -1,0 +1,127 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Register | Dockspace</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="{% static 'images/favicon.ico' %}">
+    <link href="{% static 'css/icons.min.css' %}" rel="stylesheet" type="text/css" />
+    <link href="{% static 'css/app.min.css' %}" rel="stylesheet" type="text/css" id="app-style"/>
+</head>
+<body class="loading authentication-bg" data-layout-config='{"darkMode":false}'>
+    <div class="account-pages pt-2 pt-sm-5 pb-4 pb-sm-5">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-xxl-4 col-lg-5">
+                    <div class="card">
+                        <div class="card-header pt-4 pb-4 text-center bg-primary">
+                            <a href="{% url 'dockspace:account_login' %}">
+                                <span><img src="{% static 'images/logo.png' %}" alt="" height="18"></span>
+                            </a>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="text-center w-75 m-auto">
+                                <h4 class="text-dark-50 text-center pb-0 fw-bold">Initial Setup</h4>
+                                <p class="text-muted mb-4">Create your admin account to get started.</p>
+                            </div>
+
+                            {% if messages %}
+                                {% for message in messages %}
+                                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                        {{ message }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="mb-3">
+                                    <label class="form-label" for="full_name">Full Name</label>
+                                    <input class="form-control" type="text" id="full_name" name="full_name" required placeholder="First Last" value="{{ full_name|default:'' }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="email">Email address</label>
+                                    <input class="form-control" type="email" id="email" name="email" required placeholder="you@example.com" value="{{ email|default:'' }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="username">Username</label>
+                                    <input class="form-control" type="text" id="username" name="username" required placeholder="username" value="{{ username|default:'' }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="password">Password</label>
+                                    <div class="input-group input-group-merge">
+                                        <input type="password" id="password" name="password" class="form-control" placeholder="Enter your password" minlength="8" required>
+                                        <div class="input-group-text" data-password="false">
+                                            <span class="password-eye"></span>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">Minimum 8 characters</small>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="password_confirmation">Confirm Password</label>
+                                    <div class="input-group input-group-merge">
+                                        <input type="password" id="password_confirmation" name="password_confirmation" class="form-control" placeholder="Re-enter password" minlength="8" required>
+                                        <div class="input-group-text" data-password="false">
+                                            <span class="password-eye"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% if settings_form %}
+                                    <div class="border rounded p-3 mb-3">
+                                        <h5 class="fw-semibold mb-3">Application Settings</h5>
+                                        <div class="mb-3">
+                                            <label class="form-label" for="{{ settings_form.session_timeout.id_for_label }}">
+                                                <i class="mdi mdi-timer-outline me-1"></i>Session Timeout (seconds)
+                                            </label>
+                                            {{ settings_form.session_timeout }}
+                                            {% if settings_form.session_timeout.help_text %}
+                                                <small class="text-muted d-block mt-1">{{ settings_form.session_timeout.help_text }}</small>
+                                            {% endif %}
+                                            {% if settings_form.session_timeout.errors %}
+                                                <div class="text-danger small mt-1">{{ settings_form.session_timeout.errors|join:", " }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="mb-0">
+                                            <label class="form-label" for="{{ settings_form.domain_url.id_for_label }}">
+                                                <i class="mdi mdi-web me-1"></i>Domain URL
+                                            </label>
+                                            {{ settings_form.domain_url }}
+                                            {% if settings_form.domain_url.help_text %}
+                                                <small class="text-muted d-block mt-1">{{ settings_form.domain_url.help_text }}</small>
+                                            {% endif %}
+                                            {% if settings_form.domain_url.errors %}
+                                                <div class="text-danger small mt-1">{{ settings_form.domain_url.errors|join:", " }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="alert alert-info mb-0 mt-3">
+                                            <i class="mdi mdi-information-outline me-1"></i>
+                                            These settings seed the system domain and how long logins stay active.
+                                        </div>
+                                    </div>
+                                {% endif %}
+                                <div class="alert alert-info mb-3">
+                                    <i class="mdi mdi-information-outline me-1"></i>
+                                    <strong>First Account Setup:</strong> This account will be created as an administrator with full system access.
+                                </div>
+                                <div class="mb-0 text-center">
+                                    <button class="btn btn-primary" type="submit">Create Admin Account</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12 text-center">
+                            <p class="text-muted">Already have an account? <a href="{% url 'dockspace:account_login' %}" class="text-muted ms-1"><b>Log In</b></a></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include "dockspace/components/footer.html" %}
+    <script src="{% static 'js/vendor.min.js' %}"></script>
+    <script src="{% static 'js/app.min.js' %}"></script>
+</body>
+</html>

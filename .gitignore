@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Environments
+.venv/
+env/
+venv/
+.env
+.env.*
+
+# Django
+db.sqlite3
+media/
+data/dms/
+
+# Byte-compiled / logs
+*.log
+
+# VS Code / IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Node / frontend artifacts
+node_modules/
+*.tsbuildinfo
+
+# macOS
+.DS_Store
+
+# Poetry
+.cache/
+
+# Local settings
+settings.local.json

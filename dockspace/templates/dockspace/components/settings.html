@@ -1,0 +1,178 @@
+<!-- Right Sidebar -->
+<div class="end-bar">
+
+    <div class="rightbar-title">
+        <a href="javascript:void(0);" class="end-bar-toggle float-end">
+            <i class="dripicons-cross noti-icon"></i>
+        </a>
+        <h5 class="m-0">Settings</h5>
+    </div>
+
+    <div class="rightbar-content h-100" data-simplebar>
+
+        <div class="p-3">
+            <div class="alert alert-warning" role="alert">
+                <strong>Customize </strong> the overall color scheme, sidebar menu, etc.
+            </div>
+
+            <!-- Settings -->
+            <h5 class="mt-3">Color Scheme</h5>
+            <hr class="mt-1" />
+
+            <div class="form-check form-switch mb-1">
+                <input class="form-check-input" type="checkbox" name="color-scheme-mode" value="light" id="light-mode-check" checked>
+                <label class="form-check-label" for="light-mode-check">Light Mode</label>
+            </div>
+
+            <div class="form-check form-switch mb-1">
+                <input class="form-check-input" type="checkbox" name="color-scheme-mode" value="dark" id="dark-mode-check">
+                <label class="form-check-label" for="dark-mode-check">Dark Mode</label>
+            </div>
+
+            <!-- Left Sidebar-->
+            <h5 class="mt-4">Left Sidebar</h5>
+            <hr class="mt-1" />
+            <div class="form-check form-switch mb-1">
+                <input class="form-check-input" type="checkbox" name="theme" value="default" id="default-check">
+                <label class="form-check-label" for="default-check">Default</label>
+            </div>
+
+            <div class="form-check form-switch mb-1">
+                <input class="form-check-input" type="checkbox" name="theme" value="light" id="light-check" checked>
+                <label class="form-check-label" for="light-check">Light</label>
+            </div>
+
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" name="theme" value="dark" id="dark-check">
+                <label class="form-check-label" for="dark-check">Dark</label>
+            </div>
+
+            <div class="form-check form-switch mb-1">
+                <input class="form-check-input" type="checkbox" name="compact" value="fixed" id="fixed-check" checked>
+                <label class="form-check-label" for="fixed-check">Fixed</label>
+            </div>
+
+            <div class="form-check form-switch mb-1">
+                <input class="form-check-input" type="checkbox" name="compact" value="condensed" id="condensed-check">
+                <label class="form-check-label" for="condensed-check">Condensed</label>
+            </div>
+
+            <div class="form-check form-switch mb-1">
+                <input class="form-check-input" type="checkbox" name="compact" value="scrollable" id="scrollable-check">
+                <label class="form-check-label" for="scrollable-check">Scrollable</label>
+            </div>
+
+            <div class="d-grid mt-4">
+                <button class="btn btn-primary" id="resetBtn">Reset to Default</button>
+            </div>
+        </div> <!-- end padding-->
+
+    </div>
+</div>
+
+<div class="rightbar-overlay"></div>
+
+<script>
+(function() {
+    'use strict';
+
+    const SETTINGS_KEY = 'dockspace_settings';
+
+    // Default settings
+    const defaultSettings = {
+        colorScheme: 'light',
+        sidebarTheme: 'light',
+        sidebarCompact: 'fixed'
+    };
+
+    // Load settings from localStorage
+    function loadSettings() {
+        try {
+            const saved = localStorage.getItem(SETTINGS_KEY);
+            return saved ? JSON.parse(saved) : defaultSettings;
+        } catch (e) {
+            console.error('Failed to load settings:', e);
+            return defaultSettings;
+        }
+    }
+
+    // Save settings to localStorage
+    function saveSettings(settings) {
+        try {
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        } catch (e) {
+            console.error('Failed to save settings:', e);
+        }
+    }
+
+    // Apply settings to the page
+    function applySettings(settings) {
+        // Apply color scheme
+        document.querySelectorAll('[name="color-scheme-mode"]').forEach(input => {
+            input.checked = input.value === settings.colorScheme;
+        });
+
+        // Apply sidebar theme
+        document.querySelectorAll('[name="theme"]').forEach(input => {
+            input.checked = input.value === settings.sidebarTheme;
+        });
+
+        // Apply sidebar compact mode
+        document.querySelectorAll('[name="compact"]').forEach(input => {
+            input.checked = input.value === settings.sidebarCompact;
+        });
+
+        // Trigger the actual theme changes (if app.js handles it)
+        if (window.Hyper && window.Hyper.layout) {
+            const layout = window.Hyper.layout;
+            if (settings.colorScheme === 'dark') {
+                layout.changeColorScheme('dark');
+            } else {
+                layout.changeColorScheme('light');
+            }
+            layout.changeLeftSidebarTheme(settings.sidebarTheme);
+            layout.changeLeftSidebarType(settings.sidebarCompact);
+        }
+    }
+
+    // Handle setting changes
+    function handleSettingChange(name, value) {
+        const settings = loadSettings();
+
+        if (name === 'color-scheme-mode') {
+            settings.colorScheme = value;
+        } else if (name === 'theme') {
+            settings.sidebarTheme = value;
+        } else if (name === 'compact') {
+            settings.sidebarCompact = value;
+        }
+
+        saveSettings(settings);
+        applySettings(settings);
+    }
+
+    // Initialize settings on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const settings = loadSettings();
+        applySettings(settings);
+
+        // Attach event listeners
+        document.querySelectorAll('[name="color-scheme-mode"], [name="theme"], [name="compact"]').forEach(input => {
+            input.addEventListener('change', function() {
+                if (this.checked) {
+                    handleSettingChange(this.name, this.value);
+                }
+            });
+        });
+
+        // Reset button
+        const resetBtn = document.getElementById('resetBtn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', function() {
+                localStorage.removeItem(SETTINGS_KEY);
+                applySettings(defaultSettings);
+            });
+        }
+    });
+})();
+</script>

@@ -1,0 +1,471 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <meta charset="utf-8" />
+        <title>Profile | Dockspace</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <base href="{% static '' %}">
+        <link rel="shortcut icon" href="images/favicon.ico">
+        <link href="assets/css/icons.min.css" rel="stylesheet" type="text/css" />
+        <link href="assets/css/app.min.css" rel="stylesheet" type="text/css" id="app-style"/>
+
+    </head>
+
+<body class="loading" data-layout-color="light" data-leftbar-theme="dark" data-layout-mode="fluid" data-rightbar-onstart="false">
+        <!-- Begin page -->
+        <div class="wrapper">
+            {% include "dockspace/components/left-sidebar.html" %}
+
+            <!-- ============================================================== -->
+            <!-- Start Page Content here -->
+            <!-- ============================================================== -->
+
+            <div class="content-page">
+                <div class="content">
+                    {% include "dockspace/components/header.html" %}
+
+                    <!-- Start Content-->
+                    <div class="container-fluid">
+                        
+                        <!-- start page title -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="page-title-box">
+                                    <div class="page-title-right">
+                                        <ol class="breadcrumb m-0">
+                                            <li class="breadcrumb-item"><a href="javascript: void(0);">Dockspace</a></li>
+                                            <li class="breadcrumb-item active">Profile</li>
+                                        </ol>
+                                    </div>
+                                    <h4 class="page-title">Mail account profile</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- end page title --> 
+
+                        {% if is_admin_viewing_other %}
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="alert alert-warning border-0 mb-3" role="alert">
+                                    <div class="d-flex align-items-center">
+                                        <i class="mdi mdi-shield-account-outline me-2 fs-3"></i>
+                                        <div class="flex-grow-1">
+                                            <h5 class="alert-heading mb-1">
+                                                <i class="mdi mdi-alert me-1"></i>Admin Mode: Viewing {{ account.email }}'s Profile
+                                            </h5>
+                                            <p class="mb-0">
+                                                You are currently viewing and can edit this user's profile information.
+                                                TOTP/2FA settings cannot be managed for other users.
+                                            </p>
+                                        </div>
+                                        <a href="{% url 'dockspace:management' %}" class="btn btn-light btn-sm ms-3">
+                                            <i class="mdi mdi-arrow-left me-1"></i>Back to Management
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if messages %}
+                        <div class="row">
+                            <div class="col-12">
+                                {% for message in messages %}
+                                    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} alert-dismissible bg-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} text-white border-0 fade show" role="alert">
+                                        {{ message }}
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="row">
+                            <div class="col-xl-4">
+                                <!-- Profile summary -->
+                                <div class="card bg-primary">
+                                    <div class="card-body profile-user-box">
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-lg me-3">
+                                                {% if account.picture %}
+                                                    <img src="{{ account.picture.url }}" alt="{{ account.email }}" class="rounded-circle img-thumbnail">
+                                                {% else %}
+                                                    <span class="d-inline-flex rounded-circle bg-light bg-opacity-25 text-white fw-bold align-items-center justify-content-center" style="width: 64px; height: 64px;">
+                                                        {% if account.first_name or account.last_name %}
+                                                            {{ account.first_name|default_if_none:""|slice:":1"|upper }}{{ account.last_name|default_if_none:""|slice:":1"|upper }}
+                                                        {% elif account.email %}
+                                                            {{ account.email|slice:":1"|upper }}
+                                                        {% else %}
+                                                            {{ account.username|default:"?"|slice:":1"|upper }}
+                                                        {% endif %}
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <h4 class="mt-1 mb-1 text-white">
+                                                    {% if account.first_name or account.last_name %}
+                                                        {{ account.first_name }}{% if account.middle_name %} {{ account.middle_name }}{% endif %}{% if account.last_name %} {{ account.last_name }}{% endif %}
+                                                    {% else %}
+                                                        {{ account.email }}
+                                                    {% endif %}
+                                                </h4>
+                                                {% if account.nickname %}
+                                                    <p class="font-13 text-white-50 mb-0">{{ account.nickname }}</p>
+                                                {% endif %}
+                                                <p class="font-13 text-white-50 mb-0">{{ account.email }}</p>
+                                                <p class="font-13 text-white-50 mb-2">@{{ account.username }}</p>
+                                                <div class="d-flex flex-wrap gap-2">
+                                                    <span class="badge bg-light text-primary">{{ account.is_active|yesno:"Active,Disabled" }}</span>
+                                                    <span class="badge bg-light text-primary">{{ account.is_admin|yesno:"Admin,User" }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row text-center mt-3">
+                                            <div class="col-4">
+                                                <h5 class="mb-1 text-white">{{ aliases|length }}</h5>
+                                                <p class="mb-0 font-13 text-white-50">Aliases</p>
+                                            </div>
+                                            <div class="col-4">
+                                                <h5 class="mb-1 text-white">{{ groups|length }}</h5>
+                                                <p class="mb-0 font-13 text-white-50">Groups</p>
+                                            </div>
+                                            <div class="col-4">
+                                                <h5 class="mb-1 text-white">{% if quota %}{{ quota.quota_string }}{% else %}&mdash;{% endif %}</h5>
+                                                <p class="mb-0 font-13 text-white-50">Mail quota</p>
+                                            </div>
+                                        </div>
+                                    </div> <!-- end card-body/ profile-user-box-->
+                                </div><!--end profile/ card -->
+
+                                <!-- Account attributes -->
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h4 class="header-title mt-0 mb-3">Account details</h4>
+                                        <dl class="row mb-0">
+                                            <dt class="col-5 text-muted">Phone</dt>
+                                            <dd class="col-7 mb-2">
+                                                {{ account.phone_number|default:"—" }}
+                                                {% if account.phone_number and account.phone_number_verified %}
+                                                    <span class="badge bg-success ms-1">Verified</span>
+                                                {% endif %}
+                                            </dd>
+
+                                            <dt class="col-5 text-muted">Website</dt>
+                                            <dd class="col-7 mb-2">{% if account.website %}<a href="{{ account.website }}" target="_blank" rel="noopener">{{ account.website }}</a>{% else %}&mdash;{% endif %}</dd>
+
+                                            <dt class="col-5 text-muted">Profile URL</dt>
+                                            <dd class="col-7 mb-2">{% if account.profile %}<a href="{{ account.profile }}" target="_blank" rel="noopener">{{ account.profile }}</a>{% else %}&mdash;{% endif %}</dd>
+
+                                            <dt class="col-5 text-muted">Gender</dt>
+                                            <dd class="col-7 mb-2">{{ account.gender|default:"—" }}</dd>
+
+                                            <dt class="col-5 text-muted">Birthdate</dt>
+                                            <dd class="col-7 mb-2">{% if account.birthdate %}{{ account.birthdate }}{% else %}&mdash;{% endif %}</dd>
+
+                                            <dt class="col-5 text-muted">Time zone</dt>
+                                            <dd class="col-7 mb-2">{{ account.zoneinfo|default:"—" }}</dd>
+
+                                            <dt class="col-5 text-muted">Locale</dt>
+                                            <dd class="col-7 mb-2">{{ account.locale|default:"—" }}</dd>
+
+                                            <dt class="col-5 text-muted">Street</dt>
+                                            <dd class="col-7 mb-2">{{ account.street_address|default:"—" }}</dd>
+
+                                            <dt class="col-5 text-muted">City / Locality</dt>
+                                            <dd class="col-7 mb-2">{{ account.locality|default:"—" }}</dd>
+
+                                            <dt class="col-5 text-muted">Region</dt>
+                                            <dd class="col-7 mb-2">{{ account.region|default:"—" }}</dd>
+
+                                            <dt class="col-5 text-muted">Postal code</dt>
+                                            <dd class="col-7 mb-2">{{ account.postal_code|default:"—" }}</dd>
+
+                                            <dt class="col-5 text-muted">Country</dt>
+                                            <dd class="col-7 mb-2">{{ account.country|default:"—" }}</dd>
+
+                                            <dt class="col-5 text-muted">Created</dt>
+                                            <dd class="col-7 mb-2">{% if account.created_at %}{{ account.created_at|date:"Y-m-d H:i" }}{% else %}&mdash;{% endif %}</dd>
+
+                                            <dt class="col-5 text-muted">Updated</dt>
+                                            <dd class="col-7 mb-0">{% if account.updated_at %}{{ account.updated_at|date:"Y-m-d H:i" }}{% else %}&mdash;{% endif %}</dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div> <!-- end col-->
+
+                            <div class="col-xl-8">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-start mb-3">
+                                            <div class="flex-grow-1">
+                                                <h4 class="header-title">Profile details</h4>
+                                                <p class="text-muted font-13 mb-0">Update your mail account profile and OIDC claims.</p>
+                                            </div>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#profileFormCollapse" aria-expanded="false" aria-controls="profileFormCollapse">
+                                                    <i class="mdi mdi-account-edit-outline me-1"></i> Edit profile
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="collapse" id="profileFormCollapse">
+                                            <form method="post" enctype="multipart/form-data" novalidate>
+                                                {% csrf_token %}
+                                                <input type="hidden" name="action" value="profile">
+                                                {% if profile_form.non_field_errors %}
+                                                    <div class="alert alert-danger" role="alert">
+                                                        {% for error in profile_form.non_field_errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                                <div class="row g-3">
+                                                    {% for field in profile_form %}
+                                                        {% if field.name == "street_address" or field.name == "profile" or field.name == "website" or field.name == "picture" %}
+                                                            <div class="col-12">
+                                                        {% else %}
+                                                            <div class="col-md-6">
+                                                        {% endif %}
+                                                                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}</label>
+                                                                {{ field }}
+                                                                {% if field.help_text %}<small class="text-muted d-block">{{ field.help_text }}</small>{% endif %}
+                                                                {% for error in field.errors %}
+                                                                    <div class="text-danger small">{{ error }}</div>
+                                                                {% endfor %}
+                                                            </div>
+                                                    {% endfor %}
+                                                </div>
+                                                <div class="mt-3 text-end">
+                                                    <button class="btn btn-primary" type="submit">
+                                                        <i class="mdi mdi-content-save-outline me-1"></i> Save profile
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <p class="text-muted small mb-0">Click “Edit profile” to expand the form when you need to change details.</p>
+                                    </div>
+                                </div>
+
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h4 class="header-title mb-2">Reset Password</h4>
+                                        <p class="text-muted mb-3">
+                                            {% if is_admin_viewing_other %}
+                                                {% if account.is_admin %}
+                                                    <span class="text-warning"><i class="mdi mdi-alert-outline me-1"></i>Cannot reset password for another administrator.</span>
+                                                {% else %}
+                                                    Set a new password for {{ account.email }}.
+                                                {% endif %}
+                                            {% else %}
+                                                Change your account password. You will be logged out after resetting.
+                                            {% endif %}
+                                        </p>
+
+                                        {% if not is_admin_viewing_other or not account.is_admin %}
+                                            <form method="post" class="row g-3">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="action" value="reset_password">
+                                                <div class="col-md-6">
+                                                    <label class="form-label" for="new_password">New Password</label>
+                                                    <input type="password" class="form-control" id="new_password" name="new_password" required minlength="8" placeholder="Enter new password">
+                                                    <small class="text-muted">Minimum 8 characters</small>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label" for="confirm_password">Confirm Password</label>
+                                                    <input type="password" class="form-control" id="confirm_password" name="confirm_password" required minlength="8" placeholder="Re-enter password">
+                                                </div>
+                                                <div class="col-12">
+                                                    <button type="submit" class="btn btn-danger" onclick="return confirm('{% if is_admin_viewing_other %}Reset password for {{ account.email }}?{% else %}Reset your password? You will be logged out.{% endif %}')">
+                                                        <i class="mdi mdi-lock-reset me-1"></i>
+                                                        {% if is_admin_viewing_other %}
+                                                            Reset Password for {{ account.email }}
+                                                        {% else %}
+                                                            Reset My Password
+                                                        {% endif %}
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-start mb-2">
+                                            <div class="flex-grow-1">
+                                                <h4 class="header-title">Two-factor authentication (TOTP)</h4>
+                                                <p class="text-muted mb-2">Register an authenticator app or disable it for this mailbox.</p>
+                                            </div>
+                                            <span class="badge {% if account.totp_verified_at %}bg-success{% elif account.totp_secret %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                                {% if account.totp_verified_at %}Enabled{% elif account.totp_secret %}Pending{% else %}Disabled{% endif %}
+                                            </span>
+                                        </div>
+
+                                        {% if account.totp_secret and account.totp_verified_at %}
+                                            <p class="mb-3 text-success">Authenticator verified on {{ account.totp_verified_at|date:"Y-m-d H:i" }}.</p>
+                                            <div class="d-flex flex-wrap gap-2">
+                                                <form method="post" class="d-inline">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="action" value="totp_generate">
+                                                    <button type="submit" class="btn btn-outline-primary btn-sm">
+                                                        <i class="mdi mdi-refresh me-1"></i> Regenerate secret
+                                                    </button>
+                                                </form>
+                                                <form method="post" class="d-inline">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="action" value="totp_disable">
+                                                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                                                        <i class="mdi mdi-close-circle-outline me-1"></i> Disable TOTP
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        {% elif account.totp_secret %}
+                                            <p class="mb-3 text-warning">Scan the code below with your authenticator, then enter the 6-digit code to finish setup.</p>
+                                            {% if totp_qr %}
+                                                <div class="d-flex align-items-center flex-wrap gap-3 mb-3">
+                                                    <img src="{{ totp_qr }}" alt="TOTP QR code" class="rounded border" style="max-width: 180px;">
+                                                    <div class="flex-grow-1">
+                                                        <p class="text-muted small mb-2">Provisioning URI</p>
+                                                        <code class="d-block small text-break">{{ totp_provisioning_uri|default:"Not available" }}</code>
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                            <form method="post" class="row g-2 align-items-end">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="action" value="totp_verify">
+                                                <div class="col-sm-8">
+                                                    <label class="form-label" for="{{ totp_form.token.id_for_label }}">{{ totp_form.token.label }}</label>
+                                                    {{ totp_form.token }}
+                                                    {% for error in totp_form.token.errors %}
+                                                        <div class="text-danger small">{{ error }}</div>
+                                                    {% endfor %}
+                                                    {% for error in totp_form.non_field_errors %}
+                                                        <div class="text-danger small">{{ error }}</div>
+                                                    {% endfor %}
+                                                </div>
+                                                <div class="col-sm-4 text-sm-end">
+                                                    <button type="submit" class="btn btn-success w-100">Verify code</button>
+                                                </div>
+                                            </form>
+                                            <form method="post" class="mt-2">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="action" value="totp_disable">
+                                                <button type="submit" class="btn btn-link text-danger p-0">Cancel setup</button>
+                                            </form>
+                                        {% else %}
+                                            <p class="mb-3 text-muted">Protect sign-in with a TOTP authenticator such as Google Authenticator, 1Password, or Authy.</p>
+                                            <form method="post">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="action" value="totp_generate">
+                                                <button type="submit" class="btn btn-outline-primary">
+                                                    <i class="mdi mdi-shield-key-outline me-1"></i> Register authenticator
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- end col -->
+
+                        </div>
+                        <!-- end row -->
+
+                        <div class="row">
+                            <div class="col-xl-8">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <h4 class="header-title mb-0">Mail aliases</h4>
+                                            <span class="badge bg-secondary ms-2">{{ aliases|length }}</span>
+                                        </div>
+                                        {% if aliases %}
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-centered mb-0">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th>Alias</th>
+                                                            <th>Destination</th>
+                                                            <th>Updated</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for alias in aliases %}
+                                                            <tr>
+                                                                <td>{{ alias.alias }}</td>
+                                                                <td>{{ alias.recipient_email|default:account.email }}</td>
+                                                                <td>{% if alias.updated_at %}{{ alias.updated_at|date:"Y-m-d H:i" }}{% else %}&mdash;{% endif %}</td>
+                                                            </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        {% else %}
+                                            <p class="text-muted mb-0">No aliases configured for this mailbox.</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-xl-4">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <h4 class="header-title mb-0">Groups</h4>
+                                            <span class="badge bg-secondary ms-2">{{ groups|length }}</span>
+                                        </div>
+                                        {% if groups %}
+                                            <ul class="list-group list-group-flush">
+                                                {% for group in groups %}
+                                                    <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                                                        <span>{{ group.name }}</span>
+                                                        <i class="mdi mdi-account-group text-muted"></i>
+                                                    </li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% else %}
+                                            <p class="text-muted mb-0">Not a member of any mail groups.</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- end col -->
+
+                        </div>
+                        <!-- end row -->
+                        
+                    </div> <!-- container -->
+
+                </div> <!-- content -->
+
+                {% include "dockspace/components/footer.html" %}
+
+            </div>
+
+            <!-- ============================================================== -->
+            <!-- End Page content -->
+            <!-- ============================================================== -->
+
+
+        </div>
+        <!-- END wrapper -->
+
+
+        {% include "dockspace/components/settings.html" %}
+
+
+        <!-- bundle -->
+        <script src="assets/js/vendor.min.js"></script>
+        <script src="assets/js/app.min.js"></script>
+
+        <!-- Charts removed to avoid canvas reuse errors -->
+        <script>
+        function pageSearch(query) {
+            if (!query) return;
+            const match = window.find(query, false, false, true, false, false, false);
+            if (!match) {
+                console.warn('No match for', query);
+            }
+        }
+        </script>
+        <!-- end demo js-->
+    </body>
+
+</html>

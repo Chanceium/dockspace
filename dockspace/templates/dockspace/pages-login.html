@@ -1,0 +1,83 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Log In | Dockspace</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="{% static 'images/favicon.ico' %}">
+    <link href="{% static 'css/icons.min.css' %}" rel="stylesheet" type="text/css" />
+    <link href="{% static 'css/app.min.css' %}" rel="stylesheet" type="text/css" id="app-style"/>
+</head>
+<body class="loading authentication-bg" data-layout-config='{"darkMode":false}'>
+    <div class="account-pages pt-2 pt-sm-5 pb-4 pb-sm-5">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-xxl-4 col-lg-5">
+                    <div class="card">
+                        <div class="card-header pt-4 pb-4 text-center bg-primary">
+                            <a href="{% url 'dockspace:account_profile' %}">
+                                <span><img src="{% static 'images/logo.png' %}" alt="" height="18"></span>
+                            </a>
+                        </div>
+
+                        <div class="card-body p-4">
+                            <div class="text-center w-75 m-auto">
+                                <h4 class="text-dark-50 text-center pb-0 fw-bold">Sign In</h4>
+                                <p class="text-muted mb-4">Enter your username/email and password.</p>
+                            </div>
+
+                            <form method="post" novalidate>
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ next }}">
+
+                                <div class="mb-3">
+                                    <label for="{{ form.username.id_for_label }}" class="form-label">Username or email</label>
+                                    {{ form.username }}
+                                    {% for error in form.username.errors %}
+                                        <div class="text-danger small mt-1">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+
+                                <div class="mb-3">
+                                    <a href="{% url 'dockspace:account_recoverpw' %}" class="text-muted float-end"><small>Forgot your password?</small></a>
+                                    <label for="{{ form.password.id_for_label }}" class="form-label">Password</label>
+                                    <div class="input-group input-group-merge">
+                                        {{ form.password }}
+                                        <div class="input-group-text" data-password="false">
+                                            <span class="password-eye"></span>
+                                        </div>
+                                    </div>
+                                    {% for error in form.password.errors %}
+                                        <div class="text-danger small mt-1">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+
+                                {% for error in form.non_field_errors %}
+                                    <div class="text-danger small mb-2">{{ error }}</div>
+                                {% endfor %}
+
+                                <div class="mb-3 mb-0 text-center">
+                                    <button class="btn btn-primary" type="submit">Log In</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-12 text-center">
+                            <p class="text-muted">Don't have an account? <a href="{% url 'dockspace:account_register' %}" class="text-muted ms-1"><b>Sign Up</b></a></p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include "dockspace/components/footer.html" %}
+
+    <script src="{% static 'js/vendor.min.js' %}"></script>
+    <script src="{% static 'js/app.min.js' %}"></script>
+</body>
+</html>
