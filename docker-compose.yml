@@ -3,10 +3,15 @@ services:
     image: ghcr.io/chanceium/dockspace:latest
     env_file:
       - .env
+    environment:
+      DJANGO_DB_PATH: /data/db.sqlite3
+      DJANGO_MEDIA_ROOT: /data/media
     command: sh -c "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000"
     ports:
       - "8000:8000"
     volumes:
-      - /path/to/app:/app
-      - /path/to/dms:/dms
+      # Persist SQLite DB and media uploads in a single host directory
+      - /srv/containers/dockspace:/data
+      # Mail server config (adjust path as needed)
+      - /srv/Docker-Mail/config:/dms
     restart: unless-stopped

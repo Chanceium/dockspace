@@ -17,6 +17,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 DMS_OUTPUT_DIR = DATA_DIR / "dms"
+DB_PATH = Path(os.getenv("DJANGO_DB_PATH", BASE_DIR / "db.sqlite3"))
 
 
 # Quick-start development settings - unsuitable for production
@@ -97,7 +98,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': DB_PATH,
     }
 }
 
@@ -144,7 +145,7 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media uploads (e.g., MailAccount pictures)
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = Path(os.getenv("DJANGO_MEDIA_ROOT", BASE_DIR / "media"))
 
 # Only allow authentication to OIDC clients for Django users, with optional group gating
 OIDC_AFTER_AUTHENTICATION_HOOK = 'dockspace.hooks.enforce_group_access'
