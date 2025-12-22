@@ -255,6 +255,34 @@
                                                                         </form>
                                                                     </div>
                                                                 </div>
+                                                                <div class="col-md-4">
+                                                                    <div class="border rounded p-3 h-100 d-flex flex-column">
+                                                                        <h6 class="fw-semibold mb-2">Account controls</h6>
+                                                                        <form method="post" class="mb-3">
+                                                                            {% csrf_token %}
+                                                                            <input type="hidden" name="action" value="set_admin">
+                                                                            <input type="hidden" name="account_id" value="{{ acct.id }}">
+                                                                            <div class="form-check form-switch">
+                                                                                <input class="form-check-input" type="checkbox" role="switch" id="is-admin-{{ acct.id }}" name="is_admin" {% if acct.is_admin %}checked{% endif %} {% if acct.id == current_account.id and admin_count <= 1 %}disabled{% endif %} onchange="this.form.submit();">
+                                                                                <label class="form-check-label" for="is-admin-{{ acct.id }}">Admin access</label>
+                                                                            </div>
+                                                                            <small class="text-muted d-block">Admins can access this management page.</small>
+                                                                        </form>
+                                                                        <form method="post" onsubmit="return confirm('Delete account {{ acct.email }}? This cannot be undone.');" class="mt-auto">
+                                                                            {% csrf_token %}
+                                                                            <input type="hidden" name="action" value="delete_account">
+                                                                            <input type="hidden" name="account_id" value="{{ acct.id }}">
+                                                                            <button class="btn btn-outline-danger btn-sm w-100" type="submit" {% if acct.id == current_account.id or (acct.is_admin and admin_count <= 1) %}disabled{% endif %}>
+                                                                                <i class="mdi mdi-delete me-1"></i>Delete account
+                                                                            </button>
+                                                                            {% if acct.id == current_account.id %}
+                                                                                <small class="text-muted d-block mt-1">You cannot delete your own account here.</small>
+                                                                            {% elif acct.is_admin and admin_count <= 1 %}
+                                                                                <small class="text-muted d-block mt-1">At least one admin is required.</small>
+                                                                            {% endif %}
+                                                                        </form>
+                                                                    </div>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>

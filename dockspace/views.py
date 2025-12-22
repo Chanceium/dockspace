@@ -423,6 +423,7 @@ def management_dashboard(request):
 		.prefetch_related("mail_aliases", "mail_groups")
 		.order_by("email")
 	)
+	admin_count = MailAccount.objects.filter(is_admin=True).count()
 	recent_updated = accounts.order_by("-updated_at")[:5]
 	recent_created = accounts.order_by("-created_at")[:5]
 	groups = MailGroup.objects.all().order_by("name")
@@ -474,7 +475,12 @@ def management_dashboard(request):
 			else:
 				messages.error(request, "Could not create account. Check the form for errors.")
 		elif action == "update_quota" and target_account:
-			quota = getattr(target_account, "mail_quota", None)
+			try:
+				quota = target_account.mail_quota
+			except MailQuota.DoesNotExist:
+				quota = MailQuota(user=target_account)
+			# Ensure user is set for validation
+			quota.user = target_account
 			form = MailQuotaForm(request.POST, instance=quota)
 			if form.is_valid():
 				obj = form.save(commit=False)
@@ -483,6 +489,35 @@ def management_dashboard(request):
 				messages.success(request, f"Updated quota for {target_account.email}.")
 				return redirect("dockspace:management")
 			messages.error(request, "Could not update quota. Check the values and try again.")
+		elif action == "set_admin" and target_account:
+			desired_admin = request.POST.get("is_admin") == "on"
+			if not desired_admin:
+				if target_account.id == account.id:
+					messages.error(request, "You cannot remove your own admin access from the management page.")
+					return redirect("dockspace:management")
+				current_admins = MailAccount.objects.filter(is_admin=True).count()
+				if current_admins <= 1:
+					messages.error(request, "At least one admin account is required.")
+					return redirect("dockspace:management")
+			MailAccount.objects.filter(pk=target_account.pk).update(is_admin=desired_admin)
+			if target_account.user:
+				target_account.user.is_staff = desired_admin
+				target_account.user.save(update_fields=["is_staff"])
+			status = "granted" if desired_admin else "removed"
+			messages.success(request, f"Admin access {status} for {target_account.email}.")
+			return redirect("dockspace:management")
+		elif action == "delete_account" and target_account:
+			if target_account.id == account.id:
+				messages.error(request, "You cannot delete your own account from the management page.")
+				return redirect("dockspace:management")
+			if target_account.is_admin:
+				current_admins = MailAccount.objects.filter(is_admin=True).count()
+				if current_admins <= 1:
+					messages.error(request, "Cannot delete the last admin account.")
+					return redirect("dockspace:management")
+			target_account.delete()
+			messages.success(request, f"Deleted account {target_account.email}.")
+			return redirect("dockspace:management")
 		elif action == "add_alias" and target_account:
 			form = MailAliasForm(request.POST)
 			if form.is_valid():
@@ -669,6 +704,8 @@ def management_dashboard(request):
 		"settings_form": settings_form,
 		"app_settings": app_settings,
 		"rsa_key_exists": rsa_key_exists,
+		"admin_count": admin_count,
+		"current_account": account,
 	}
 	return render(request, "dockspace/crm-management.html", context)
 
