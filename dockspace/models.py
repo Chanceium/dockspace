@@ -105,15 +105,20 @@ class MailGroup(models.Model):
 
 class ClientAccess(models.Model):
     """
-    Optional MailGroup bindings for an OIDC client.
+    Optional MailGroup bindings and security settings for an OIDC client.
 
     - If no row exists for a client, any account may use it.
     - If a row exists with no groups, any account may use it.
     - If groups are attached, accounts must belong to at least one.
+    - If require_2fa is True, users must have completed TOTP verification.
     """
 
     client = models.OneToOneField(Client, on_delete=models.CASCADE, related_name="group_access")
     groups = models.ManyToManyField(MailGroup, blank=True, related_name="oidc_clients")
+    require_2fa = models.BooleanField(
+        default=False,
+        help_text="Require two-factor authentication (TOTP) for this client"
+    )
 
     class Meta:
         verbose_name = "Client access"

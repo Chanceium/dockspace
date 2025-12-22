@@ -602,9 +602,11 @@ def management_dashboard(request):
 				if form.is_valid():
 					access, _ = ClientAccess.objects.get_or_create(client=client_obj)
 					access.groups.set(form.cleaned_data["groups"])
-					messages.success(request, f"Updated access groups for {client_obj.name or client_obj.client_id}.")
+					access.require_2fa = form.cleaned_data["require_2fa"]
+					access.save()
+					messages.success(request, f"Updated access settings for {client_obj.name or client_obj.client_id}.")
 					return redirect("dockspace:management")
-				messages.error(request, "Could not update client groups.")
+				messages.error(request, "Could not update client settings.")
 			else:
 				messages.error(request, "Client not found.")
 		elif action == "regenerate_rsa_key":
@@ -676,6 +678,21 @@ def root_redirect(request):
 
 def page_not_found_view(request):
 	return render(request, "dockspace/pages-404.html", status=404)
+
+
+def page_2fa_required(request):
+	"""Display 2FA required page with link to profile."""
+	app_settings = AppSettings.objects.first()
+	domain = getattr(app_settings, 'domain_url', None) or request.get_host()
+	profile_url = f"{request.scheme}://{domain}/profile"
+
+	client_name = request.GET.get('client', None)
+
+	context = {
+		'profile_url': profile_url,
+		'client_name': client_name,
+	}
+	return render(request, "dockspace/pages-2fa-required.html", context)
 
 
 @login_required(login_url="dockspace:account_login")

@@ -262,12 +262,18 @@ class AccountGroupsForm(forms.Form):
 
 
 class ClientGroupsForm(forms.Form):
-    """Assign groups for an OIDC client (access gating)."""
+    """Assign groups and security settings for an OIDC client (access gating)."""
 
     groups = forms.ModelMultipleChoiceField(
         queryset=MailGroup.objects.all(),
         required=False,
         widget=forms.SelectMultiple(attrs={"class": "form-select", "size": "5"}),
+    )
+    require_2fa = forms.BooleanField(
+        required=False,
+        label="Require Two-Factor Authentication",
+        help_text="Users must complete TOTP verification to access this client",
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
     )
 
 
