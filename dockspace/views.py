@@ -46,6 +46,10 @@ class AccountLoginForm(forms.Form):
 
 
 def account_login(request):
+	# If no accounts exist yet, send users to initial registration
+	if not MailAccount.objects.exists():
+		return redirect("dockspace:account_register")
+
 	if request.user.is_authenticated:
 		account = getattr(request.user, "account", None)
 		target = reverse("dockspace:management") if getattr(account, "is_admin", False) else reverse("dockspace:account_profile")
@@ -104,7 +108,8 @@ def account_register(request):
 
 	if request.method == "POST":
 		# Get form data
-		full_name = request.POST.get("full_name", "").strip()
+		first_name = request.POST.get("first_name", "").strip()
+		last_name = request.POST.get("last_name", "").strip()
 		email = request.POST.get("email", "").strip()
 		username = request.POST.get("username", "").strip()
 		password = request.POST.get("password", "")
@@ -113,8 +118,10 @@ def account_register(request):
 
 		# Validation
 		errors = []
-		if not full_name:
-			errors.append("Full name is required.")
+		if not first_name:
+			errors.append("First name is required.")
+		if not last_name:
+			errors.append("Last name is required.")
 		if not email:
 			errors.append("Email is required.")
 		if not username:
@@ -136,21 +143,18 @@ def account_register(request):
 			for error in errors:
 				messages.error(request, error)
 			return render(request, "dockspace/pages-register.html", {
-				"full_name": full_name,
+				"first_name": first_name,
+				"last_name": last_name,
 				"email": email,
 				"username": username,
 				"settings_form": settings_form,
 			})
 
-		# Split full name into first and last
-		name_parts = full_name.split(None, 1)  # Split on whitespace, max 2 parts
-		first_name = name_parts[0] if name_parts else ""
-		last_name = name_parts[1] if len(name_parts) > 1 else ""
 
 		settings_form.save()
 
 		# Create the first admin account
-		account = MailAccount.objects.create(
+		account = MailAccount(
 			username=username,
 			email=email,
 			first_name=first_name,
@@ -626,6 +630,8 @@ def management_dashboard(request):
 
 def root_redirect(request):
 	"""Redirect root path to login page."""
+	if not MailAccount.objects.exists():
+		return redirect("dockspace:account_register")
 	return redirect("dockspace:account_login")
 
 

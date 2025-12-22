@@ -38,8 +38,12 @@
                             <form method="post">
                                 {% csrf_token %}
                                 <div class="mb-3">
-                                    <label class="form-label" for="full_name">Full Name</label>
-                                    <input class="form-control" type="text" id="full_name" name="full_name" required placeholder="First Last" value="{{ full_name|default:'' }}">
+                                    <label class="form-label" for="first_name">First Name</label>
+                                    <input class="form-control" type="text" id="first_name" name="first_name" required placeholder="First" value="{{ first_name|default:'' }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="last_name">Last Name</label>
+                                    <input class="form-control" type="text" id="last_name" name="last_name" required placeholder="Last" value="{{ last_name|default:'' }}">
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label" for="email">Email address</label>
