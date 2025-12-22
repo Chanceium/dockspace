@@ -212,6 +212,8 @@ def account_totp(request):
 					# Apply session timeout from app settings
 					app_settings = AppSettings.load()
 					request.session.set_expiry(app_settings.session_timeout)
+					request.session["totp_verified_account"] = account.id
+					request.session["totp_verified_at"] = timezone.now().isoformat()
 					request.session.pop("pending_totp_account", None)
 					request.session.pop("pending_totp_next", None)
 					return redirect(next_url)
@@ -324,6 +326,8 @@ def account_profile(request, account_id=None):
 							totp_last_counter=0,
 						)
 						account.refresh_from_db(fields=["totp_verified_at", "totp_last_counter"])
+						request.session["totp_verified_account"] = account.id
+						request.session["totp_verified_at"] = now.isoformat()
 						messages.success(request, "Authenticator code verified.")
 						return redirect("dockspace:account_profile")
 					totp_form.add_error("token", "That code did not match. Try again.")

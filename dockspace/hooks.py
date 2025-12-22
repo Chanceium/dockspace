@@ -5,6 +5,32 @@ from django.urls import reverse
 logger = logging.getLogger(__name__)
 
 
+def _resolve_account(user):
+    """Return MailAccount associated with user or via email lookup."""
+    account = getattr(user, "account", None)
+    if account:
+        return account
+    email = getattr(user, "email", "") or ""
+    if not email:
+        return None
+    from dockspace.models import MailAccount
+
+    try:
+        account = MailAccount.objects.get(email__iexact=email)
+        user.account = account
+        return account
+    except MailAccount.DoesNotExist:
+        return None
+
+
+def _session_totp_verified(request, account_id):
+    """Check if the current session completed TOTP for the account."""
+    try:
+        return int(request.session.get("totp_verified_account")) == int(account_id)
+    except (TypeError, ValueError):
+        return False
+
+
 def enforce_group_access(request, user, client, **kwargs):
     """
     OIDC hook that restricts client usage to MailAccount users and enforces optional group membership and 2FA.
@@ -20,24 +46,22 @@ def enforce_group_access(request, user, client, **kwargs):
     group_access = getattr(client, "group_access", None)
     logger.info(f"group_access for client {client.client_id}: {group_access}")
 
+    account = _resolve_account(user)
+
     # Check if 2FA is required for this client
     if group_access and group_access.require_2fa:
         logger.info(f"Client {client.client_id} requires 2FA")
+        is_verified = False
         if hasattr(user, "is_verified"):
-            is_verified = False
             try:
                 is_verified = user.is_verified()
             except TypeError:
                 is_verified = bool(user.is_verified)
-            if not is_verified:
-                logger.warning(f"User {user} failed 2FA verification for client requiring 2FA")
-                # Redirect to 2FA required page with client name
-                client_name = client.name or client.client_id
-                redirect_url = f"{reverse('dockspace:page_2fa_required')}?client={client_name}"
-                return HttpResponseRedirect(redirect_url)
-        else:
-            logger.warning(f"User {user} has no 2FA capability but client requires it")
-            # Redirect to 2FA required page with client name
+        if not is_verified and account:
+            is_verified = _session_totp_verified(request, account.id) or bool(account.totp_verified_at)
+
+        if not account or not account.totp_secret or not is_verified:
+            logger.warning(f"User {user} failed 2FA verification for client requiring 2FA")
             client_name = client.name or client.client_id
             redirect_url = f"{reverse('dockspace:page_2fa_required')}?client={client_name}"
             return HttpResponseRedirect(redirect_url)
@@ -54,17 +78,6 @@ def enforce_group_access(request, user, client, **kwargs):
     if not required_groups:
         logger.info(f"No specific groups required for client {client.client_id}, allowing access")
         return None
-
-    account = getattr(user, "account", None)
-    if account is None:
-        # Try to resolve MailAccount by email as a fallback (e.g., staff user)
-        from dockspace.models import MailAccount
-
-        try:
-            account = MailAccount.objects.get(email__iexact=getattr(user, "email", ""))
-            logger.info(f"Found account via email lookup: {account}")
-        except MailAccount.DoesNotExist:
-            account = None
 
     if account is None:
         logger.warning(f"No account found for user {user}, denying access")
