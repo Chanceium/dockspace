@@ -1,6 +1,17 @@
 # Version control
-.git
+.git/
 .gitignore
+.gitattributes
+*.md
+README*
+LICENSE
+CHANGELOG*
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
 
 # Python caches and venvs
 __pycache__/
@@ -13,25 +24,53 @@ __pycache__/
 env/
 venv/
 .env
+.env.*
 .cache/
+*.egg-info/
+dist/
+build/
+
+# Testing
+.pytest_cache/
+.coverage
+.tox/
+htmlcov/
+*.cover
 
 # Editor/OS clutter
 .idea/
 .vscode/
 *.swp
 *.swo
+*.bak
 .DS_Store
+Thumbs.db
 
 # Django artifacts
 db.sqlite3
+db.sqlite3-journal
 media/
 staticfiles/
 data/
+*.log
 
 # Node/frontend artifacts
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 *.tsbuildinfo
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Documentation
+docs/
+*.txt
+!requirements.txt
 
 # Local settings
 settings.local.json
-docs/
+.env.local

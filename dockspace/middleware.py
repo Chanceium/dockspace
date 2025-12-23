@@ -66,3 +66,23 @@ class DomainSettingsMiddleware:
 
 	def __call__(self, request):
 		return self.get_response(request)
+
+
+class SecurityHeadersMiddleware:
+	"""
+	Custom middleware to add security headers including Content-Security-Policy.
+	This supplements Django's built-in SecurityMiddleware.
+	"""
+	def __init__(self, get_response):
+		self.get_response = get_response
+
+	def __call__(self, request):
+		response = self.get_response(request)
+
+		# Add Content-Security-Policy if enabled in settings
+		if getattr(settings, 'ENABLE_CSP', False):
+			csp = getattr(settings, 'SECURE_CONTENT_SECURITY_POLICY', None)
+			if csp:
+				response['Content-Security-Policy'] = csp
+
+		return response

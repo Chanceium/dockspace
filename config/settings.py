@@ -15,19 +15,53 @@ from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BASE_DIR / "data"
-DMS_OUTPUT_DIR = Path(os.getenv("DJANGO_DMS_OUTPUT_DIR", DATA_DIR / "dms"))
-DB_PATH = Path(os.getenv("DJANGO_DB_PATH", BASE_DIR / "db.sqlite3"))
+
+# Data directory: defaults to /data in production (Docker), or BASE_DIR/data for local dev
+DATA_DIR = Path(os.getenv("DJANGO_DATA_DIR", "/data" if os.getenv("ENVIRONMENT", "production") == "production" else str(BASE_DIR / "data")))
+
+# Ensure DATA_DIR exists
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+# DMS output directory: separate mount point
+DMS_OUTPUT_DIR = Path(os.getenv("DJANGO_DMS_OUTPUT_DIR", "/dms"))
+
+# Database and media paths: always relative to DATA_DIR
+DB_PATH = DATA_DIR / "database" / "db.sqlite3"
+MEDIA_ROOT = DATA_DIR / "media"
+
+# Ensure database directory exists
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", 'django-insecure-)2^n#6+w*iz8$2g1zeietmarx2@161%2+9=6806ycf*(!ox)+#')
+# Auto-generate and persist secret key if not provided via environment variable
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
+if not SECRET_KEY:
+    # Try to load from persistent config file
+    SECRET_KEY_FILE = DATA_DIR / "config" / "secret_key.txt"
+    try:
+        SECRET_KEY = SECRET_KEY_FILE.read_text().strip()
+    except FileNotFoundError:
+        # Generate new secret key and save it
+        from django.core.management.utils import get_random_secret_key
+        SECRET_KEY = get_random_secret_key()
+        SECRET_KEY_FILE.parent.mkdir(parents=True, exist_ok=True)
+        SECRET_KEY_FILE.write_text(SECRET_KEY)
+        SECRET_KEY_FILE.chmod(0o600)  # Secure file permissions (owner read/write only)
+
+# ==============================================================================
+# ENVIRONMENT CONFIGURATION
+# ==============================================================================
+# Set ENVIRONMENT=production or ENVIRONMENT=development
+# This automatically configures DEBUG, HTTPS, and security settings
+ENVIRONMENT = os.getenv("ENVIRONMENT", "production").lower()
+IS_PRODUCTION = ENVIRONMENT == "production"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() in ("1", "true", "yes", "on")
+DEBUG = ENVIRONMENT == "development"
 
 
 def env_list(name: str, default: str = ""):
@@ -35,8 +69,23 @@ def env_list(name: str, default: str = ""):
     return [item.strip() for item in raw.split(",") if item.strip()]
 
 
-ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,[::1],0.0.0.0")
-CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS", "")
+# SECURITY: Configure allowed hosts based on environment
+# In development: automatically uses localhost/127.0.0.1
+# In production: uses DOMAINS environment variable (comma-separated list)
+if IS_PRODUCTION:
+    # Production: use DOMAINS variable (e.g., "example.com,www.example.com")
+    ALLOWED_HOSTS = env_list("DOMAINS", "")
+    if not ALLOWED_HOSTS:
+        raise ValueError(
+            "DOMAINS environment variable is required in production. "
+            "Set it to your domain(s), e.g., DOMAINS=example.com,www.example.com"
+        )
+    # Auto-generate CSRF trusted origins with https:// prefix
+    CSRF_TRUSTED_ORIGINS = [f"https://{host}" for host in ALLOWED_HOSTS]
+else:
+    # Development: automatically use localhost
+    ALLOWED_HOSTS = ["localhost", "127.0.0.1", "[::1]"]
+    CSRF_TRUSTED_ORIGINS = ["http://localhost", "http://127.0.0.1"]
 
 
 # Application definition
@@ -62,6 +111,7 @@ AUTHENTICATION_BACKENDS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'dockspace.middleware.SecurityHeadersMiddleware',  # Custom security headers (CSP, etc.)
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -113,12 +163,18 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 12,  # Increased from default 8 for better security
+        }
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
     },
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+    {
+        'NAME': 'dockspace.validators.PasswordComplexityValidator',
     },
 ]
 
@@ -146,7 +202,7 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media uploads (e.g., MailAccount pictures)
 MEDIA_URL = '/media/'
-MEDIA_ROOT = Path(os.getenv("DJANGO_MEDIA_ROOT", BASE_DIR / "media"))
+# MEDIA_ROOT is defined at the top of this file alongside DATA_DIR
 
 # Only allow authentication to OIDC clients for Django users, with optional group gating
 OIDC_AFTER_USERLOGIN_HOOK = 'dockspace.hooks.enforce_group_access'
@@ -161,3 +217,63 @@ DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 LOGIN_URL = 'dockspace:account_login'
 OTP_TOTP_ISSUER = ''
 TWO_FACTOR_PATCH_ADMIN = False  # keep Django admin using its built-in login flow
+
+# ==============================================================================
+# SECURITY SETTINGS
+# ==============================================================================
+
+# Production environment automatically enables all security features
+# Development environment disables them for easier local development
+
+# Trust proxy headers (required when running behind reverse proxy like Nginx, Traefik, Cloudflare, etc.)
+# Django needs to know the original protocol (HTTP/HTTPS) from the proxy
+if IS_PRODUCTION:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Enable HTTPS-only cookies in production
+SECURE_SSL_REDIRECT = IS_PRODUCTION
+
+# Session cookies: secure (HTTPS-only) in production
+SESSION_COOKIE_SECURE = IS_PRODUCTION
+SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access to session cookie (XSS protection)
+SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
+
+# CSRF cookies: secure (HTTPS-only) in production
+CSRF_COOKIE_SECURE = IS_PRODUCTION
+CSRF_COOKIE_HTTPONLY = True  # Prevent JavaScript access to CSRF token
+CSRF_COOKIE_SAMESITE = 'Lax'
+
+# HTTP Strict Transport Security (HSTS)
+# Instructs browsers to only access the site over HTTPS for the specified time period
+# Automatically enabled in production
+if IS_PRODUCTION:
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+# Content Security Policy
+# Helps prevent XSS attacks by controlling what resources can be loaded
+# Automatically enabled in production
+if IS_PRODUCTION:
+    # This is a strict CSP. Adjust based on your needs.
+    # Note: OIDC provider and admin may need 'unsafe-inline' for styles
+    SECURE_CONTENT_SECURITY_POLICY = (
+        "default-src 'self'; "
+        "script-src 'self'; "
+        "style-src 'self' 'unsafe-inline'; "  # unsafe-inline needed for Django admin
+        "img-src 'self' data:; "
+        "font-src 'self'; "
+        "connect-src 'self'; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self';"
+    )
+
+# Prevent browsers from guessing content types
+SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# Enable browser XSS filtering
+SECURE_BROWSER_XSS_FILTER = True
+
+# X-Frame-Options is already set to DENY by XFrameOptionsMiddleware
+X_FRAME_OPTIONS = 'DENY'

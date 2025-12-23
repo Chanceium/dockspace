@@ -14,9 +14,12 @@ venv/
 
 # Django
 db.sqlite3
+database/
 media/
-data/dms/
 staticfiles/
+
+# Data directory (persistent storage)
+data/
 # Byte-compiled / logs
 *.log
 

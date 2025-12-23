@@ -223,8 +223,8 @@ class MailAccountCreateForm(forms.ModelForm):
 
     password = forms.CharField(
         widget=forms.PasswordInput(attrs={"class": "form-control", "placeholder": "Password"}),
-        help_text="Password for the new account.",
-        min_length=8,
+        help_text="Password must be at least 12 characters with uppercase, lowercase, digit, and special character.",
+        min_length=12,
     )
 
     class Meta:
@@ -238,9 +238,12 @@ class MailAccountCreateForm(forms.ModelForm):
         }
 
     def clean_password(self):
+        from django.contrib.auth.password_validation import validate_password
         password = self.cleaned_data.get("password")
-        if not password or len(password) < 8:
-            raise forms.ValidationError("Password must be at least 8 characters.")
+        if not password or len(password) < 12:
+            raise forms.ValidationError("Password must be at least 12 characters.")
+        # Run Django's password validators (including our custom complexity validator)
+        validate_password(password)
         return password
 
     def _post_clean(self):

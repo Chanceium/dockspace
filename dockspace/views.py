@@ -126,10 +126,19 @@ def account_register(request):
 			errors.append("Email is required.")
 		if not username:
 			errors.append("Username is required.")
-		if not password or len(password) < 8:
-			errors.append("Password must be at least 8 characters.")
+		if not password or len(password) < 12:
+			errors.append("Password must be at least 12 characters.")
 		if password != password_confirmation:
 			errors.append("Passwords do not match.")
+
+		# Validate password complexity using Django's validators
+		if password:
+			from django.contrib.auth.password_validation import validate_password
+			from django.core.exceptions import ValidationError
+			try:
+				validate_password(password)
+			except ValidationError as e:
+				errors.extend(e.messages)
 
 		# Check for existing username/email (double-check even though we checked count)
 		if MailAccount.objects.filter(username=username).exists():
