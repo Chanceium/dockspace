@@ -1,0 +1,695 @@
+"""
+Mail management API endpoints.
+Handles quotas, aliases, and groups.
+"""
+import json
+from dockspace.api.decorators import json_login_required, json_admin_required
+from django.core.exceptions import ValidationError
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+
+from dockspace.core.models import MailAccount, MailAlias, MailGroup, MailQuota
+
+
+# ============================================================================
+# Mail Quota API
+# ============================================================================
+
+@json_admin_required
+@require_http_methods(["GET"])
+def list_quotas(requestList all mail quotas (admin only).):
+	"""List all mail quotas (admin only)."""
+	try:
+		mail_account = MailAccount.objects.get(user=request.user)
+	except MailAccount.DoesNotExist:
+		return JsonResponse({
+			'success': False,
+			'error': 'Account not found'
+		}, status=404)
+
+	if not mail_account.is_admin:
+		return JsonResponse({
+			'success': False,
+			'error': 'Admin access required'
+		}, status=403)
+
+	quotas = MailQuota.objects.select_related('user').all()
+	quota_list = [{
+		'id': q.id,
+		'user_id': q.user.id,
+		'user_email': q.user.email,
+		'size_value': q.size_value,
+		'suffix': q.suffix,
+		'quota_string': q.quota_string,
+	} for q in quotas]
+
+	return JsonResponse({
+		'success': True,
+		'quotas': quota_list
+	})
+
+
+@json_login_required
+@require_http_methods(["GET"])
+def get_quota(request, account_id):
+	"""Get quota for a specific account."""
+	try:
+		mail_account = MailAccount.objects.get(user=request.user)
+	except MailAccount.DoesNotExist:
+		return JsonResponse({
+			'success': False,
+			'error': 'Account not found'
+		}, status=404)
+
+	# Users can view their own quota, admins can view any
+	if not mail_account.is_admin and mail_account.id != int(account_id):
+		return JsonResponse({
+			'success': False,
+			'error': 'Permission denied'
+		}, status=403)
+
+	try:
+		target_account = MailAccount.objects.get(id=account_id)
+		quota = MailQuota.objects.get(user=target_account)
+		return JsonResponse({
+			'success': True,
+			'quota': {
+				'id': quota.id,
+				'user_id': quota.user.id,
+				'user_email': quota.user.email,
+				'size_value': quota.size_value,
+				'suffix': quota.suffix,
+				'quota_string': quota.quota_string,
+			}
+		})
+	except MailAccount.DoesNotExist:
+		return JsonResponse({
+			'success': False,
+			'error': 'Account not found'
+		}, status=404)
+	except MailQuota.DoesNotExist:
+		return JsonResponse({
+			'success': False,
+			'error': 'No quota set for this account'
+		}, status=404)
+
+
+@json_admin_required
+@require_http_methods(["POST"])
+def create_quota(requestCreate or update quota for an account (admin only).):
+	"""Create or update quota for an account (admin only)."""
+	try:
+		mail_account = MailAccount.objects.get(user=request.user)
+	except MailAccount.DoesNotExist:
+		return JsonResponse({
+			'success': False,
+			'error': 'Account not found'
+		}, status=404)
+
+	if not mail_account.is_admin:
+		return JsonResponse({
+			'success': False,
+			'error': 'Admin access required'
+		}, status=403)
+
+	try:
+		data = json.loads(request.body)
+		user_id = data.get('user_id')
+		size_value = data.get('size_value')
+		suffix = data.get('suffix', 'G')
+
+		if not user_id or not size_value:
+			return JsonResponse({
+				'success': False,
+				'error': 'user_id and size_value are required'
+			}, status=400)
+
+		if size_value <= 0:
+			return JsonResponse({
+				'success': False,
+				'error': 'Quota size must be greater than zero'
+			}, status=400)
+
+		try:
+			target_account = MailAccount.objects.get(id=user_id)
+		except MailAccount.DoesNotExist:
+			return JsonResponse({
+				'success': False,
+				'error': 'Target account not found'
+			}, status=404)
+
+		# Create or update quota
+		quota, created = MailQuota.objects.update_or_create(
+			user=target_account,
+			defaults={
+				'size_value': size_value,
+				'suffix': suffix,
+			}
+		)
+
+		# Validate
+		try:
+			quota.full_clean()
+		except ValidationError as e:
+			quota.delete() if created else None
+			return JsonResponse({
+				'success': False,
+				'error': str(e)
+			}, status=400)
+
+		return JsonResponse({
+			'success': True,
+			'message': f'Quota {"created" if created else "updated"} successfully',
+			'quota': {
+				'id': quota.id,
+				'user_id': quota.user.id,
+				'user_email': quota.user.email,
+				'size_value': quota.size_value,
+				'suffix': quota.suffix,
+				'quota_string': quota.quota_string,
+			}
+		})
+
+	except json.JSONDecodeError:
+		return JsonResponse({
+			'success': False,
+			'error': 'Invalid JSON'
+		}, status=400)
+	except Exception as e:
+		return JsonResponse({
+			'success': False,
+			'error': str(e)
+		}, status=500)
+
+
+@json_admin_required
+@require_http_methods(["DELETE"])
+def delete_quota(requestDelete a mail quota (admin only).):
+	"""Delete a mail quota (admin only)."""
+	try:
+		mail_account = MailAccount.objects.get(user=request.user)
+	except MailAccount.DoesNotExist:
+		return JsonResponse({
+			'success': False,
+			'error': 'Account not found'
+		}, status=404)
+
+	if not mail_account.is_admin:
+		return JsonResponse({
+			'success': False,
+			'error': 'Admin access required'
+		}, status=403)
+
+	try:
+		quota = MailQuota.objects.get(id=quota_id)
+		quota.delete()
+		return JsonResponse({
+			'success': True,
+			'message': 'Quota deleted successfully'
+		})
+	except MailQuota.DoesNotExist:
+		return JsonResponse({
+			'success': False,
+			'error': 'Quota not found'
+		}, status=404)
+
+
+# ============================================================================
+# Mail Alias API
+# ============================================================================
+
+@json_login_required
+@require_http_methods(["GET"])
+def list_aliases(request):
+	"""List mail aliases for current user or all (if admin)."""
+	try:
+		mail_account = MailAccount.objects.get(user=request.user)
+	except MailAccount.DoesNotExist:
+		return JsonResponse({
+			'success': False,
+			'error': 'Account not found'
+		}, status=404)
+
+	if mail_account.is_admin:
+		aliases = MailAlias.objects.select_related('user').all()
+	else:
+		aliases = MailAlias.objects.filter(user=mail_account)
+
+	alias_list = [{
+		'id': a.id,
+		'alias': a.alias,
+		'user_id': a.user.id,
+		'user_email': a.user.email,
+	} for a in aliases]
+
+	return JsonResponse({
+		'success': True,
+		'aliases': alias_list
+	})
+
+
+@json_login_required
+@require_http_methods(["POST"])
+def create_alias(request):
+	"""Create a mail alias for the current user or any user (if admin)."""
+	try:
+		mail_account = MailAccount.objects.get(user=request.user)
+	except MailAccount.DoesNotExist:
+		return JsonResponse({
+			'success': False,
+			'error': 'Account not found'
+		}, status=404)
+
+	try:
+		data = json.loads(request.body)
+		alias_email = data.get('alias', '').strip().lower()
+		user_id = data.get('user_id')
+
+		if not alias_email:
+			return JsonResponse({
+				'success': False,
+				'error': 'Alias email is required'
+			}, status=400)
+
+		# Determine target user
+		if user_id:
+			if not mail_account.is_admin:
+				return JsonResponse({
+					'success': False,
+					'error': 'Only admins can create aliases for other users'
+				}, status=403)
+			try:
+				target_user = MailAccount.objects.get(id=user_id)
+			except MailAccount.DoesNotExist:
+				return JsonResponse({
+					'success': False,
+					'error': 'Target user not found'
+				}, status=404)
+		else:
+			target_user = mail_account
+
+		# Create alias
+		alias = MailAlias(alias=alias_email, user=target_user)
+
+		# Validate
+		try:
+			alias.full_clean()
+		except ValidationError as e:
+			return JsonResponse({
+				'success': False,
+				'error': str(e)
+			}, status=400)
+
+		alias.save()
+
+		return JsonResponse({
+			'success': True,
+			'message': 'Alias created successfully',
+			'alias': {
+				'id': alias.id,
+				'alias': alias.alias,
+				'user_id': alias.user.id,
+				'user_email': alias.user.email,
+			}
+		})
+
+	except json.JSONDecodeError:
+		return JsonResponse({
+			'success': False,
+			'error': 'Invalid JSON'
+		}, status=400)
+	except Exception as e:
+		return JsonResponse({
+			'success': False,
+			'error': str(e)
+		}, status=500)
+
+
+@json_login_required
+@require_http_methods(["DELETE"])
+def delete_alias(request, alias_id):
+	"""Delete a mail alias."""
+	try:
+		mail_account = MailAccount.objects.get(user=request.user)
+	except MailAccount.DoesNotExist:
+		return JsonResponse({
+			'success': False,
+			'error': 'Account not found'
+		}, status=404)
+
+	try:
+		alias = MailAlias.objects.get(id=alias_id)
+
+		# Users can only delete their own aliases, admins can delete any
+		if not mail_account.is_admin and alias.user.id != mail_account.id:
+			return JsonResponse({
+				'success': False,
+				'error': 'Permission denied'
+			}, status=403)
+
+		alias.delete()
+		return JsonResponse({
+			'success': True,
+			'message': 'Alias deleted successfully'
+		})
+	except MailAlias.DoesNotExist:
+		return JsonResponse({
+			'success': False,
+			'error': 'Alias not found'
+		}, status=404)
+
+
+# ============================================================================
+# Mail Group API
+# ============================================================================
+
+@json_login_required
+@require_http_methods(["GET"])
+def list_groups(request):
+	"""List all mail groups."""
+	try:
+		mail_account = MailAccount.objects.get(user=request.user)
+	except MailAccount.DoesNotExist:
+		return JsonResponse({
+			'success': False,
+			'error': 'Account not found'
+		}, status=404)
+
+	groups = MailGroup.objects.all()
+	group_list = [{
+		'id': g.id,
+		'name': g.name,
+		'member_count': g.members.count(),
+	} for g in groups]
+
+	return JsonResponse({
+		'success': True,
+		'groups': group_list
+	})
+
+
+@json_login_required
+@require_http_methods(["GET"])
+def get_group(request, group_id):
+	"""Get details of a specific mail group."""
+	try:
+		mail_account = MailAccount.objects.get(user=request.user)
+	except MailAccount.DoesNotExist:
+		return JsonResponse({
+			'success': False,
+			'error': 'Account not found'
+		}, status=404)
+
+	try:
+		group = MailGroup.objects.get(id=group_id)
+		members = [{
+			'id': m.id,
+			'email': m.email,
+			'username': m.username,
+			'first_name': m.first_name,
+			'last_name': m.last_name,
+		} for m in group.members.all()]
+
+		return JsonResponse({
+			'success': True,
+			'group': {
+				'id': group.id,
+				'name': group.name,
+				'members': members,
+			}
+		})
+	except MailGroup.DoesNotExist:
+		return JsonResponse({
+			'success': False,
+			'error': 'Group not found'
+		}, status=404)
+
+
+@json_admin_required
+@require_http_methods(["POST"])
+def create_group(requestCreate a new mail group (admin only).):
+	"""Create a new mail group (admin only)."""
+	try:
+		mail_account = MailAccount.objects.get(user=request.user)
+	except MailAccount.DoesNotExist:
+		return JsonResponse({
+			'success': False,
+			'error': 'Account not found'
+		}, status=404)
+
+	if not mail_account.is_admin:
+		return JsonResponse({
+			'success': False,
+			'error': 'Admin access required'
+		}, status=403)
+
+	try:
+		data = json.loads(request.body)
+		name = data.get('name', '').strip()
+
+		if not name:
+			return JsonResponse({
+				'success': False,
+				'error': 'Group name is required'
+			}, status=400)
+
+		# Check if group name already exists
+		if MailGroup.objects.filter(name=name).exists():
+			return JsonResponse({
+				'success': False,
+				'error': 'Group name already exists'
+			}, status=400)
+
+		group = MailGroup(name=name)
+
+		# Validate
+		try:
+			group.full_clean()
+		except ValidationError as e:
+			return JsonResponse({
+				'success': False,
+				'error': str(e)
+			}, status=400)
+
+		group.save()
+
+		return JsonResponse({
+			'success': True,
+			'message': 'Group created successfully',
+			'group': {
+				'id': group.id,
+				'name': group.name,
+				'member_count': 0,
+			}
+		})
+
+	except json.JSONDecodeError:
+		return JsonResponse({
+			'success': False,
+			'error': 'Invalid JSON'
+		}, status=400)
+	except Exception as e:
+		return JsonResponse({
+			'success': False,
+			'error': str(e)
+		}, status=500)
+
+
+@json_login_required
+@require_http_methods(["PUT", "PATCH"])
+def update_group(request, group_id):
+	"""Update a mail group (admin only)."""
+	try:
+		mail_account = MailAccount.objects.get(user=request.user)
+	except MailAccount.DoesNotExist:
+		return JsonResponse({
+			'success': False,
+			'error': 'Account not found'
+		}, status=404)
+
+	if not mail_account.is_admin:
+		return JsonResponse({
+			'success': False,
+			'error': 'Admin access required'
+		}, status=403)
+
+	try:
+		group = MailGroup.objects.get(id=group_id)
+	except MailGroup.DoesNotExist:
+		return JsonResponse({
+			'success': False,
+			'error': 'Group not found'
+		}, status=404)
+
+	try:
+		data = json.loads(request.body)
+		name = data.get('name', '').strip()
+
+		if name:
+			# Check if new name conflicts with existing group
+			if MailGroup.objects.filter(name=name).exclude(id=group_id).exists():
+				return JsonResponse({
+					'success': False,
+					'error': 'Group name already exists'
+				}, status=400)
+			group.name = name
+
+		# Validate
+		try:
+			group.full_clean()
+		except ValidationError as e:
+			return JsonResponse({
+				'success': False,
+				'error': str(e)
+			}, status=400)
+
+		group.save()
+
+		return JsonResponse({
+			'success': True,
+			'message': 'Group updated successfully'
+		})
+
+	except json.JSONDecodeError:
+		return JsonResponse({
+			'success': False,
+			'error': 'Invalid JSON'
+		}, status=400)
+	except Exception as e:
+		return JsonResponse({
+			'success': False,
+			'error': str(e)
+		}, status=500)
+
+
+@json_admin_required
+@require_http_methods(["DELETE"])
+def delete_group(requestDelete a mail group (admin only).):
+	"""Delete a mail group (admin only)."""
+	try:
+		mail_account = MailAccount.objects.get(user=request.user)
+	except MailAccount.DoesNotExist:
+		return JsonResponse({
+			'success': False,
+			'error': 'Account not found'
+		}, status=404)
+
+	if not mail_account.is_admin:
+		return JsonResponse({
+			'success': False,
+			'error': 'Admin access required'
+		}, status=403)
+
+	try:
+		group = MailGroup.objects.get(id=group_id)
+		group.delete()
+		return JsonResponse({
+			'success': True,
+			'message': 'Group deleted successfully'
+		})
+	except MailGroup.DoesNotExist:
+		return JsonResponse({
+			'success': False,
+			'error': 'Group not found'
+		}, status=404)
+
+
+# ============================================================================
+# Account Groups API (Assign groups to accounts)
+# ============================================================================
+
+@json_login_required
+@require_http_methods(["GET"])
+def get_account_groups(request, account_id):
+	"""Get groups for a specific account."""
+	try:
+		mail_account = MailAccount.objects.get(user=request.user)
+	except MailAccount.DoesNotExist:
+		return JsonResponse({
+			'success': False,
+			'error': 'Account not found'
+		}, status=404)
+
+	# Users can view their own groups, admins can view any
+	if not mail_account.is_admin and mail_account.id != int(account_id):
+		return JsonResponse({
+			'success': False,
+			'error': 'Permission denied'
+		}, status=403)
+
+	try:
+		target_account = MailAccount.objects.get(id=account_id)
+		groups = [{
+			'id': g.id,
+			'name': g.name,
+		} for g in target_account.mail_groups.all()]
+
+		return JsonResponse({
+			'success': True,
+			'account_id': target_account.id,
+			'account_email': target_account.email,
+			'groups': groups
+		})
+	except MailAccount.DoesNotExist:
+		return JsonResponse({
+			'success': False,
+			'error': 'Account not found'
+		}, status=404)
+
+
+@json_admin_required
+@require_http_methods(["POST"])
+def update_account_groups(requestUpdate group memberships for an account (admin only).):
+	"""Update group memberships for an account (admin only)."""
+	try:
+		mail_account = MailAccount.objects.get(user=request.user)
+	except MailAccount.DoesNotExist:
+		return JsonResponse({
+			'success': False,
+			'error': 'Account not found'
+		}, status=404)
+
+	if not mail_account.is_admin:
+		return JsonResponse({
+			'success': False,
+			'error': 'Admin access required'
+		}, status=403)
+
+	try:
+		target_account = MailAccount.objects.get(id=account_id)
+	except MailAccount.DoesNotExist:
+		return JsonResponse({
+			'success': False,
+			'error': 'Target account not found'
+		}, status=404)
+
+	try:
+		data = json.loads(request.body)
+		group_ids = data.get('group_ids', [])
+
+		# Validate all group IDs exist
+		groups = MailGroup.objects.filter(id__in=group_ids)
+		if len(groups) != len(group_ids):
+			return JsonResponse({
+				'success': False,
+				'error': 'One or more group IDs are invalid'
+			}, status=400)
+
+		# Update groups
+		target_account.mail_groups.set(groups)
+
+		return JsonResponse({
+			'success': True,
+			'message': 'Account groups updated successfully'
+		})
+
+	except json.JSONDecodeError:
+		return JsonResponse({
+			'success': False,
+			'error': 'Invalid JSON'
+		}, status=400)
+	except Exception as e:
+		return JsonResponse({
+			'success': False,
+			'error': str(e)
+		}, status=500)

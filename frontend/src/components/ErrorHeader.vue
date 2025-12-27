@@ -1,0 +1,46 @@
+<script setup lang="ts">
+interface Props {
+  statusCode?: string | number
+  title?: string
+  description?: string
+  titleIcon?: string
+  titleIconColor?: string
+}
+
+const props = defineProps<Props>()
+</script>
+
+<template>
+  <div class="text-center mb-4">
+    <!-- 👉 Title and subtitle -->
+    <h1
+      v-if="props.statusCode"
+      class="header-title font-weight-medium"
+    >
+      {{ props.statusCode }}
+    </h1>
+    <h5
+      v-if="props.title"
+      class="text-h5 font-weight-medium mb-3"
+    >
+      <VIcon
+        v-if="props.titleIcon"
+        :icon="props.titleIcon"
+        :color="props.titleIconColor || 'warning'"
+        size="26"
+        class="me-2"
+      />
+      {{ props.title }}
+    </h5>
+    <p v-if="props.description">
+      {{ props.description }}
+    </p>
+  </div>
+</template>
+
+<style lang="scss" scoped>
+.header-title {
+  font-size: clamp(3rem, 5vw, 6rem);
+  line-height: clamp(3rem, 5vw, 6rem);
+}
+</style>

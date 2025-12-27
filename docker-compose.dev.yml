@@ -5,9 +5,8 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env
-    command: sh -c "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000"
     ports:
       - "8000:8000"
     volumes:
-      - .:/app
+      - ./data:/app/data
     restart: unless-stopped

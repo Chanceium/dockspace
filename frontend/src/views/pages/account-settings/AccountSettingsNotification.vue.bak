@@ -1,0 +1,137 @@
+<script lang="ts" setup>
+const recentDevices = ref(
+  [
+    {
+      type: 'New for you',
+      email: true,
+      browser: true,
+    },
+    {
+      type: 'Account activity',
+      email: true,
+      browser: true,
+    },
+    {
+      type: 'A new browser used to sign in',
+      email: true,
+      browser: true,
+    },
+    {
+      type: 'A new device is linked',
+      email: true,
+      browser: false,
+    },
+  ],
+)
+
+const selectedNotification = ref('Only when I\'m online')
+const notificationStatus = ref('default')
+const isRequestingPermission = ref(false)
+const permissionLabel = computed(() => {
+  if (notificationStatus.value === 'unsupported')
+    return 'Browser notifications are not supported.'
+  if (notificationStatus.value === 'granted')
+    return 'Notifications are enabled.'
+  if (notificationStatus.value === 'denied')
+    return 'Notifications are blocked. Enable them in your browser settings.'
+  if (notificationStatus.value === 'default')
+    return 'We need permission from your browser to show notifications.'
+  if (notificationStatus.value === 'requesting')
+    return 'Requesting permission...'
+  return 'We need permission from your browser to show notifications.'
+})
+
+const syncNotificationStatus = () => {
+  if (typeof window === 'undefined' || !('Notification' in window)) {
+    notificationStatus.value = 'unsupported'
+    return
+  }
+
+  notificationStatus.value = Notification.permission
+}
+
+const requestNotificationPermission = async () => {
+  if (typeof window === 'undefined' || !('Notification' in window)) {
+    notificationStatus.value = 'unsupported'
+    return
+  }
+
+  isRequestingPermission.value = true
+  notificationStatus.value = 'requesting'
+  try {
+    const permission = await Notification.requestPermission()
+    notificationStatus.value = permission
+  } finally {
+    isRequestingPermission.value = false
+  }
+}
+
+onMounted(syncNotificationStatus)
+</script>
+
+<template>
+  <VCard title="Notifications">
+    <VCardText class="d-flex align-center justify-space-between flex-wrap gap-4">
+      <div>
+        {{ permissionLabel }}
+      </div>
+      <VBtn
+        variant="text"
+        :disabled="notificationStatus === 'granted' || notificationStatus === 'unsupported' || isRequestingPermission"
+        @click="requestNotificationPermission"
+      >
+        Request Permission
+      </VBtn>
+    </VCardText>
+
+    <VTable class="text-no-wrap">
+      <thead>
+        <tr>
+          <th scope="col">
+            Type
+          </th>
+          <th scope="col">
+            EMAIL
+          </th>
+          <th scope="col">
+            BROWSER
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr
+          v-for="device in recentDevices"
+          :key="device.type"
+        >
+          <td>
+            {{ device.type }}
+          </td>
+          <td>
+            <VCheckbox v-model="device.email" />
+          </td>
+          <td>
+            <VCheckbox v-model="device.browser" />
+          </td>
+        </tr>
+      </tbody>
+    </VTable>
+    <VDivider />
+
+    <VCardText>
+      <VForm @submit.prevent="() => {}">
+        <div class="d-flex flex-wrap gap-4 mt-4">
+          <VBtn type="submit">
+            Save Changes
+          </VBtn>
+          <VBtn
+            color="secondary"
+            variant="outlined"
+            type="reset"
+          >
+            Reset
+          </VBtn>
+        </div>
+      </VForm>
+    </VCardText>
+  </VCard>
+</template>
