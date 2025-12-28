@@ -14,7 +14,6 @@ Key Features:
 """
 import logging
 from django.http import HttpResponseRedirect
-from django.urls import reverse
 
 logger = logging.getLogger(__name__)
 
@@ -77,8 +76,8 @@ def enforce_group_access(request, user, client, **kwargs):
         if not account or not account.totp_secret or not is_verified:
             logger.warning(f"User {user} failed 2FA verification for client requiring 2FA")
             client_name = client.name or client.client_id
-            redirect_url = f"{reverse('dockspace:page_2fa_required')}?client={client_name}"
-            return HttpResponseRedirect(redirect_url)
+            # Vue SPA route for 2FA required
+            return HttpResponseRedirect(f"/two-factor-required?client={client_name}")
 
     if group_access is None:
         logger.info(f"No group restrictions for client {client.client_id}, allowing access")
@@ -100,7 +99,8 @@ def enforce_group_access(request, user, client, **kwargs):
             "required_groups": [name for _, name in required_groups],
             "user_groups": [],
         }
-        return HttpResponseRedirect(reverse("dockspace:page_access_denied"))
+        # Vue SPA route for access denied
+        return HttpResponseRedirect("/access-denied")
 
     user_groups = list(account.mail_groups.values_list("name", flat=True))
     logger.info(f"User {account.email} belongs to groups: {user_groups}")
@@ -118,4 +118,5 @@ def enforce_group_access(request, user, client, **kwargs):
         "required_groups": [name for _, name in required_groups],
         "user_groups": user_groups,
     }
-    return HttpResponseRedirect(reverse("dockspace:page_access_denied"))
+    # Vue SPA route for access denied
+    return HttpResponseRedirect("/access-denied")
