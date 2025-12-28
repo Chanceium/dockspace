@@ -33,6 +33,10 @@ data/
 node_modules/
 *.tsbuildinfo
 
+# Vue build output (built during Docker build)
+backend/dockspace/static/dist/
+frontend/dist/
+
 # macOS
 .DS_Store
 

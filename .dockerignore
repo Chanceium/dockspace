@@ -61,6 +61,10 @@ yarn-debug.log*
 yarn-error.log*
 *.tsbuildinfo
 
+# Vue build output (will be built fresh in Docker)
+backend/dockspace/static/dist/
+frontend/dist/
+
 # Docker
 Dockerfile*
 docker-compose*.yml

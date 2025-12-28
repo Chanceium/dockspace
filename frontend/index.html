@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dockspace</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+  <meta name="theme-color" content="#1980d8" />
+  <link rel="stylesheet" type="text/css" href="/loader.css" />
+  <!-- Favicons will be auto-injected by vite-plugin-favicon2 during build -->
+</head>
+
+<body>
+    <div id="app">
+    <div
+      id="loading-bg"
+      class="loading-hidden"
+      style="opacity: 0; visibility: hidden;"
+    >
+        <div class="loading-logo">
+          <img
+            src="/images/logo.svg"
+            alt="Dockspace logo"
+            class="loading-logo__img"
+          >
+        </div>
+        <div class="loading">
+          <div class="effect-1 effects"></div>
+          <div class="effect-2 effects"></div>
+          <div class="effect-3 effects"></div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+  <script>
+    const loaderElement = document.getElementById('loading-bg')
+    if (loaderElement) {
+      setTimeout(() => {
+        loaderElement.style.opacity = ''
+        loaderElement.style.visibility = ''
+        loaderElement.classList.add('loading-visible')
+      }, 200)
+    }
+
+    const loaderColor = localStorage.getItem('dockspace-initial-loader-bg') || '#FFFFFF'
+    const primaryColor = localStorage.getItem('dockspace-initial-loader-color') || '#1980d8'
+
+    if (loaderColor)
+      document.documentElement.style.setProperty('--initial-loader-bg', loaderColor)
+
+    if (primaryColor)
+      document.documentElement.style.setProperty('--initial-loader-color', primaryColor)
+  </script>
+</body>
+
+</html>
